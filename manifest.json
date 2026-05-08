@@ -1,7 +1,7 @@
 {
   "name": "Sales Org Visualizer",
-  "version": "1.0.0",
-  "id": "601c72e3-0354-4d9c-aca5-abb331ecd676",
+  "version": "2.0.0",
+  "id": "cd6d5a78-b900-499d-b658-9d6f12a68575",
   "fullpage": true,
   "size": {
     "width": 12,
@@ -11,7 +11,7 @@
   "datasetsMapping": [
     {
       "alias": "salesOrgPeople",
-      "dataSetId": "0c5b3caa-3a15-4bb1-80bd-df45c873da72",
+      "dataSetId": "c92d8b58-6104-4407-b5d5-9dbf45142835",
       "fields": []
     }
   ],
