@@ -1,0 +1,21 @@
+{
+  "name": "Sales Org Visualizer",
+  "version": "1.0.0",
+  "id": "601c72e3-0354-4d9c-aca5-abb331ecd676",
+  "fullpage": true,
+  "size": {
+    "width": 12,
+    "height": 8
+  },
+  "proxyId": "",
+  "datasetsMapping": [
+    {
+      "alias": "salesOrgPeople",
+      "dataSetId": "0c5b3caa-3a15-4bb1-80bd-df45c873da72",
+      "fields": []
+    }
+  ],
+  "collections": [],
+  "workflowMapping": [],
+  "packagesMapping": []
+}
