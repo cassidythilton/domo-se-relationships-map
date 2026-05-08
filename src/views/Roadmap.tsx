@@ -17,7 +17,7 @@ const ROADMAP = [
   },
   {
     title: "Per-pod overlay allocation",
-    body: "Today overlay_alloc_pct splits evenly across overlay_pods. Allow per-pod splits via a CSV like 'PodA:15,PodB:10' once the data is collected at that grain.",
+    body: "Today overlay_alloc_pct splits evenly across overlay_pods. Allow per-pod splits via a CSV like 'PodA:15,PodB:10' once data is collected at that grain.",
   },
   {
     title: "Configurable palettes via AppDB",
@@ -29,9 +29,9 @@ export function Roadmap() {
   return (
     <div className="roadmap-wrap">
       <h2>What's next</h2>
-      <p>
-        These items were intentionally deferred from v2 to keep scope tight. Each one is a clean
-        next slice; they don't depend on each other.
+      <p className="roadmap-intro">
+        These items were intentionally deferred from v2 to keep scope tight. Each is a clean next
+        slice; they don't depend on each other.
       </p>
       <div className="roadmap-list">
         {ROADMAP.map((r) => (

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useStore } from "../store";
 import { applyFilters, buildOrgTree } from "../store/selectors";
 import type { OrgNode } from "../store/selectors";
-import { managerColor, PALETTES, tint } from "../config";
+import { managerAccent } from "../config";
 import type { Person } from "../data/types";
 
 export function OrgChart() {
@@ -11,8 +11,6 @@ export function OrgChart() {
   const density = useStore((s) => s.density);
   const select = useStore((s) => s.selectPerson);
 
-  // Org chart is always rooted in SC Org, but it respects search/role filters
-  // by dimming non-matching nodes.
   const tree = useMemo(() => {
     if (!model) return null;
     const filtered = applyFilters(model, { ...filters, segment: null });
@@ -28,115 +26,116 @@ export function OrgChart() {
   const l2 = root.children;
 
   return (
-    <div className="sc-org">
-      <div className="sc-l1">
-        <Node node={root} kind="l1" matched={tree.matched} onClick={() => select(root.person.id)} />
-      </div>
-      <div className="sc-l2-row">
-        {l2.map((n) => {
-          const palette = managerColor(n.person.name);
-          return (
-            <div key={n.person.id} className="sc-l2-col">
-              <div className="sc-connector" />
-              <Node
-                node={n}
-                kind="l2"
-                palette={palette}
-                matched={tree.matched}
-                onClick={() => select(n.person.id)}
-              />
-              {density >= 2 && n.children.length > 0 && (
-                <div className="sc-l3-stack">
-                  {n.children.map((l3) => (
-                    <SubColumn
-                      key={l3.person.id}
-                      node={l3}
-                      l2Bg={palette.bg}
-                      density={density}
-                      matched={tree.matched}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
+    <div className="org-wrap">
+      <div className="org-tree">
+        <div className="org-l1">
+          <NodeCard
+            node={root}
+            kind="l1"
+            matched={tree.matched}
+            onClick={() => select(root.person.id)}
+          />
+        </div>
+        <div className="org-l2-row">
+          {l2.map((n) => {
+            const accent = managerAccent(n.person.name);
+            return (
+              <div key={n.person.id} className="org-l2-col">
+                <div className="org-connector" />
+                <NodeCard
+                  node={n}
+                  kind="l2"
+                  accent={accent}
+                  matched={tree.matched}
+                  onClick={() => select(n.person.id)}
+                />
+                {density >= 2 && n.children.length > 0 && (
+                  <div className="org-l3-stack">
+                    {n.children.map((l3) => (
+                      <SubColumn
+                        key={l3.person.id}
+                        node={l3}
+                        accent={accent}
+                        density={density}
+                        matched={tree.matched}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
 }
 
-type Pal = { bg: string; fg: string };
-
-function Node({
+function NodeCard({
   node,
   kind,
-  palette,
+  accent,
   matched,
   onClick,
 }: {
   node: OrgNode;
   kind: "l1" | "l2";
-  palette?: Pal;
+  accent?: string;
   matched: Set<string>;
   onClick: () => void;
 }) {
+  const dim = matched.size > 0 && !matched.has(node.person.id);
   if (kind === "l1") {
     return (
-      <div
-        className="sc-node sc-node-l1"
-        style={{ background: PALETTES.l1.bg, color: PALETTES.l1.fg }}
-        onClick={onClick}
-      >
-        <div className="sc-node-name">{node.person.name}</div>
+      <div className={"org-node org-node-l1" + (dim ? " dim" : "")} onClick={onClick}>
+        <div className="org-node-name">{node.person.name}</div>
+        <div className="org-node-sub">Head of Solutions Consulting</div>
       </div>
     );
   }
   const sub =
     node.person.segment_label && node.person.segment_label !== "SC Org"
       ? node.person.segment_label
-      : "";
-  const pal = palette ?? { bg: "#888", fg: "#fff" };
-  const dim = matched.size > 0 && !matched.has(node.person.id);
+      : node.person.tier;
   return (
     <div
-      className="sc-node sc-node-l2"
-      style={{ background: pal.bg, color: pal.fg, opacity: dim ? 0.4 : 1 }}
+      className={"org-node" + (dim ? " dim" : "")}
+      style={{ borderLeftColor: accent }}
       onClick={onClick}
     >
-      <div className="sc-node-name">{node.person.name}</div>
-      {sub && <div className="sc-node-sub">{sub}</div>}
+      <div className="org-node-name">{node.person.name}</div>
+      <div className="org-node-sub">{sub}</div>
     </div>
   );
 }
 
 function SubColumn({
   node,
-  l2Bg,
+  accent,
   density,
   matched,
 }: {
   node: OrgNode;
-  l2Bg: string;
+  accent: string;
   density: number;
   matched: Set<string>;
 }) {
   const select = useStore((s) => s.selectPerson);
   return (
-    <div className="sc-sub-col">
+    <div>
       <Card
         person={node.person}
-        tint={tint(l2Bg, 0.7)}
+        accent={accent}
         matched={matched}
         onClick={() => select(node.person.id)}
       />
       {density >= 3 && node.children.length > 0 && (
-        <div className="sc-l4-stack">
+        <div className="org-l4-stack">
           {node.children.map((c) => (
             <Card
               key={c.person.id}
               person={c.person}
-              tint={tint(l2Bg, 0.85)}
+              accent={accent}
               matched={matched}
               size="sm"
               onClick={() => select(c.person.id)}
@@ -150,13 +149,13 @@ function SubColumn({
 
 function Card({
   person,
-  tint: bg,
+  accent,
   matched,
   size,
   onClick,
 }: {
   person: Person;
-  tint: string;
+  accent: string;
   matched: Set<string>;
   size?: "sm";
   onClick: () => void;
@@ -164,8 +163,12 @@ function Card({
   const dim = matched.size > 0 && !matched.has(person.id);
   return (
     <div
-      className={"sc-sub-card" + (size === "sm" ? " sc-sub-card-sm" : "")}
-      style={{ background: bg, opacity: dim ? 0.4 : 1 }}
+      className={
+        "org-sub-card" +
+        (size === "sm" ? " org-sub-card-sm" : "") +
+        (dim ? " dim" : "")
+      }
+      style={{ ["--manager-accent" as string]: accent }}
       onClick={onClick}
     >
       {person.name}

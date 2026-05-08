@@ -1,34 +1,33 @@
 {
   "managers": {
-    "Dan":   { "bg": "#A691C4", "fg": "#FFFFFF" },
-    "Tyler": { "bg": "#7DC5C2", "fg": "#FFFFFF" },
-    "Chris": { "bg": "#1F1F1F", "fg": "#FFFFFF" },
-    "LQ":    { "bg": "#E2A368", "fg": "#FFFFFF" },
-    "Blake": { "bg": "#E2A368", "fg": "#FFFFFF" }
+    "Dan":   { "accent": "oklch(0.63 0.11 195)" },
+    "Tyler": { "accent": "oklch(0.63 0.11 210)" },
+    "Chris": { "accent": "oklch(0.63 0.11 225)" },
+    "LQ":    { "accent": "oklch(0.63 0.11 238)" },
+    "Blake": { "accent": "oklch(0.63 0.09 250)" }
   },
-  "l1": { "bg": "#7BA0D1", "fg": "#FFFFFF" },
   "pods": {
-    "Doug":              "#FFE0B2",
-    "Cameron":           "#C8E6C9",
-    "Dave B":            "#BBDEFB",
-    "Ty Yagi Ecosystem": "#D7CCC8",
-    "Nate Ecosystem":    "#F8BBD0",
-    "Mike H":            "#FFF9C4",
-    "Brock":             "#FFCCBC",
-    "Sione":             "#B3E5FC",
-    "Eric":              "#DCEDC8",
-    "Jordan":            "#F0F4C3",
-    "Taylor":            "#BBDEFB",
-    "Casey":             "#C8E6C9"
+    "Doug":              { "accent": "oklch(0.63 0.11 195)" },
+    "Cameron":           { "accent": "oklch(0.63 0.11 210)" },
+    "Dave B":            { "accent": "oklch(0.63 0.11 225)" },
+    "Brock":             { "accent": "oklch(0.63 0.11 238)" },
+    "Sione":             { "accent": "oklch(0.63 0.09 183)" },
+    "Eric":              { "accent": "oklch(0.63 0.09 250)" },
+    "Ty Yagi Ecosystem": { "accent": "oklch(0.55 0.10 165)" },
+    "Nate Ecosystem":    { "accent": "oklch(0.55 0.10 145)" },
+    "Mike H":            { "accent": "oklch(0.63 0.11 225)" },
+    "Jordan":            { "accent": "oklch(0.63 0.09 250)" },
+    "Taylor":            { "accent": "oklch(0.63 0.11 210)" },
+    "Casey":             { "accent": "oklch(0.55 0.10 165)" }
   },
   "roleTypes": {
-    "Corporate NL":     "#E0E0E0",
-    "Extra AE":         "#C97A7A",
-    "ISV":              "#7EC8D8",
-    "Domo Everywhere":  "#F0E68C",
-    "Ecosystem":        "#7DB96A",
-    "New Logo":         "#6B6B6B",
-    "Upsell":           "#F5D580",
-    "Enterprise":       "#9FBFE0"
+    "Corporate NL":    "oklch(0.55 0.07 230)",
+    "New Logo":        "oklch(0.55 0.10 240)",
+    "Upsell":          "oklch(0.65 0.13 60)",
+    "Extra AE":        "oklch(0.55 0.13 25)",
+    "ISV":             "oklch(0.58 0.10 200)",
+    "Domo Everywhere": "oklch(0.60 0.12 80)",
+    "Ecosystem":       "oklch(0.55 0.10 155)",
+    "Enterprise":      "oklch(0.45 0.10 250)"
   }
 }

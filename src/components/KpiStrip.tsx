@@ -29,7 +29,7 @@ export function KpiStrip() {
     <div className="kpi-strip" role="group" aria-label="Coverage KPIs">
       <Kpi
         label="Coverage"
-        value={kpis.coveragePct === null ? "n/a" : `${kpis.coveragePct}%`}
+        value={kpis.coveragePct === null ? "—" : `${kpis.coveragePct}%`}
         sub={`${model.pods.length - kpis.podsNoPrimary.length}/${model.pods.length} pods have a Primary`}
         warn={kpis.coveragePct !== null && kpis.coveragePct < 100}
         good={kpis.coveragePct === 100}
@@ -37,14 +37,15 @@ export function KpiStrip() {
       />
       <Kpi
         label="Backup coverage"
-        value={kpis.backupCoveragePct === null ? "n/a" : `${kpis.backupCoveragePct}%`}
+        value={kpis.backupCoveragePct === null ? "—" : `${kpis.backupCoveragePct}%`}
         sub={`${kpis.podsNoBackup.length} pods missing a Backup`}
         warn={kpis.backupCoveragePct !== null && kpis.backupCoveragePct < 80}
+        good={kpis.backupCoveragePct === 100}
         onClick={jumpToFirstUncovered}
       />
       <Kpi
         label="SC : pod (Primary)"
-        value={kpis.ratioPrimary === null ? "n/a" : kpis.ratioPrimary.toFixed(2)}
+        value={kpis.ratioPrimary === null ? "—" : kpis.ratioPrimary.toFixed(2)}
         sub={kpis.ratioAll === null ? "" : `All roles ratio: ${kpis.ratioAll.toFixed(2)}`}
       />
       <Kpi
@@ -66,7 +67,7 @@ export function KpiStrip() {
       {model.hasSpecializationData && (
         <Kpi
           label="Specialist gaps"
-          value={kpis.specialistGaps === null ? "n/a" : String(kpis.specialistGaps)}
+          value={kpis.specialistGaps === null ? "—" : String(kpis.specialistGaps)}
           sub="Pod × specialization not covered"
           warn={(kpis.specialistGaps ?? 0) > 0}
           onClick={jumpToSpecialist}
@@ -88,24 +89,27 @@ type KpiProps = {
 };
 
 function Kpi({ label, value, sub, warn, danger, good, active, onClick }: KpiProps) {
-  const className =
-    "kpi" +
-    (warn ? " kpi-warn" : "") +
-    (danger ? " kpi-danger" : "") +
-    (good ? " kpi-good" : "") +
-    (active ? " kpi-active" : "");
+  const classes = [
+    "kpi",
+    onClick ? "kpi-clickable" : "",
+    warn ? "kpi-warn" : "",
+    danger ? "kpi-danger" : "",
+    good ? "kpi-good" : "",
+    active ? "kpi-active" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const Tag = onClick ? "button" : "div";
   return (
-    <button
-      className={className}
+    <Tag
+      className={classes}
       onClick={onClick}
-      type="button"
-      aria-pressed={active ?? false}
-      disabled={!onClick}
-      style={onClick ? undefined : { cursor: "default" }}
+      type={onClick ? "button" : undefined}
+      aria-pressed={onClick ? active ?? false : undefined}
     >
       <span className="kpi-label">{label}</span>
       <span className="kpi-value">{value}</span>
       {sub && <span className="kpi-sub">{sub}</span>}
-    </button>
+    </Tag>
   );
 }

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useStore } from "../store";
 import { applyFilters, buildLoad } from "../store/selectors";
+import { Avatar } from "../components/Avatar";
 
 export function CapacityLoad() {
   const model = useStore((s) => s.model);
@@ -31,15 +32,17 @@ export function CapacityLoad() {
     );
   }
 
-  // Scale: max bar visualizes 150% so overload is visible
+  // Visualize up to 150% so overload remains visible.
   const SCALE = 150;
 
   return (
     <div>
-      <div className="muted" style={{ marginBottom: 8 }}>
-        Each bar = sum of allocation % across Primary, Backup, and Overlay assignments. Red &gt; 100%
-        is overloaded; grey &lt; 60% is slack. The vertical line marks each SC's target.
-      </div>
+      <p className="cap-intro">
+        Each bar = sum of allocation % across Primary, Backup, and Overlay assignments.
+        <strong style={{ color: "var(--alert-text)" }}> Red &gt; 100%</strong> is overloaded;{" "}
+        <strong style={{ color: "var(--text-muted)" }}>grey &lt; 60%</strong> is slack. The vertical
+        marker shows each SC's target.
+      </p>
       <div className="cap-list">
         {rows.map((r) => {
           const widthPct = Math.min((r.load / SCALE) * 100, 100);
@@ -50,28 +53,17 @@ export function CapacityLoad() {
               className="cap-row"
               onClick={() => select(r.person.id)}
             >
-              <div>
-                <div className="cap-name">{r.person.name}</div>
-                <div className="cap-meta">
-                  {r.person.role_type || r.person.tier} • {r.person.segment}
-                  {r.primary.pod && (
-                    <>
-                      {" "}
-                      • Primary {r.primary.pod} ({r.primary.pct}%)
-                    </>
-                  )}
-                  {r.backup.pod && (
-                    <>
-                      {" "}
-                      • Backup {r.backup.pod} ({r.backup.pct}%)
-                    </>
-                  )}
-                  {r.overlay.pods.length > 0 && (
-                    <>
-                      {" "}
-                      • Overlay {r.overlay.pods.join(", ")} ({r.overlay.pct}%)
-                    </>
-                  )}
+              <div className="cap-person">
+                <Avatar name={r.person.name} roleType={r.person.role_type} />
+                <div className="cap-person-text">
+                  <div className="cap-name">{r.person.name}</div>
+                  <div className="cap-meta">
+                    {r.person.role_type || r.person.tier} · {r.person.segment}
+                    {r.primary.pod && ` · P ${r.primary.pod} ${r.primary.pct}%`}
+                    {r.backup.pod && ` · B ${r.backup.pod} ${r.backup.pct}%`}
+                    {r.overlay.pods.length > 0 &&
+                      ` · O ${r.overlay.pods.join(", ")} ${r.overlay.pct}%`}
+                  </div>
                 </div>
               </div>
               <div className="cap-bar-track">

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useStore } from "../store";
 import { buildSpecialistMap } from "../store/selectors";
-import { podColor } from "../config";
+import { podAccent } from "../config";
 
 export function SpecialistMap() {
   const model = useStore((s) => s.model);
@@ -27,22 +27,19 @@ export function SpecialistMap() {
 
   return (
     <div className="specmap-wrap">
-      <div className="muted" style={{ marginBottom: 8 }}>
-        Pod × specialization. Cells show the count of SCs covering the pod with that specialization.
-        Empty cells are gaps. Green cells indicate at least one Primary SC carries the
-        specialization. Click a row to view that pod's full coverage.
-      </div>
+      <p className="specmap-intro">
+        Pod × specialization. Cells show the count of SCs covering the pod with that
+        specialization. Empty cells (orange) are gaps; green cells indicate at least one Primary SC
+        carries the specialization. Click a row to see that pod's full coverage.
+      </p>
       <div className="specmap-grid" style={{ gridTemplateColumns: cols }}>
         <div className="specmap-corner" />
         {data.specializations.map((s) => (
           <div
             key={s}
             className="specmap-col-label"
-            onClick={() => {
-              setFilters({ specialization: s });
-            }}
+            onClick={() => setFilters({ specialization: s })}
             title={`Filter to ${s}`}
-            style={{ cursor: "pointer" }}
           >
             {s}
           </div>
@@ -79,7 +76,7 @@ function RowCells({
     <>
       <div
         className="specmap-row-label"
-        style={{ background: podColor(pod), cursor: "pointer" }}
+        style={{ ["--pod-accent" as string]: podAccent(pod) }}
         onClick={onPodClick}
       >
         {pod}

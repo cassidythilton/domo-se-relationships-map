@@ -10,7 +10,7 @@ export function FilterRail() {
 
   return (
     <aside className="filter-rail" aria-label="Filters">
-      <h3>Filters</h3>
+      <h3>Refine</h3>
 
       <Select
         label="Segment"
@@ -56,6 +56,7 @@ export function FilterRail() {
                   key={b}
                   className={"tri-btn" + (filters.loadBucket === b ? " active" : "")}
                   onClick={() => setFilters({ loadBucket: filters.loadBucket === b ? null : b })}
+                  type="button"
                 >
                   {b}
                 </button>
@@ -127,18 +128,21 @@ function Tri({
         <button
           className={"tri-btn" + (value === null ? " active" : "")}
           onClick={() => onChange(null)}
+          type="button"
         >
           Any
         </button>
         <button
           className={"tri-btn" + (value === true ? " active" : "")}
           onClick={() => onChange(true)}
+          type="button"
         >
           Yes
         </button>
         <button
           className={"tri-btn" + (value === false ? " active" : "")}
           onClick={() => onChange(false)}
+          type="button"
         >
           No
         </button>

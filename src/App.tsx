@@ -16,6 +16,17 @@ import { SpecialistMap } from "./views/SpecialistMap";
 import { CapacityLoad } from "./views/CapacityLoad";
 import { Roadmap } from "./views/Roadmap";
 
+const VIEW_DESCRIPTIONS: Record<string, string> = {
+  scOrg: "Solutions Consulting org chart with manager hierarchy.",
+  corpNL: "Coverage matrix for the Corporate New Logo segment.",
+  corpUpsell: "Coverage matrix for the Corporate Upsell segment.",
+  ent: "Coverage matrix for the Enterprise segment.",
+  reverse: "Pick a pod to see every SC covering it, plus the management chain.",
+  specialist: "Pod × specialization heatmap. Cells highlight uncovered specializations.",
+  capacity: "Per-SC load with target lines. Red = overloaded, grey = slack.",
+  roadmap: "What's intentionally not yet built, and what's coming next.",
+};
+
 export function App() {
   const setRows = useStore((s) => s.setRows);
   const setError = useStore((s) => s.setError);
@@ -40,9 +51,8 @@ export function App() {
   }, [setRows, setError]);
 
   const cfg = VIEW_BY_KEY.get(view);
+  const subtitle = VIEW_DESCRIPTIONS[view] ?? "";
 
-  // When the view is a segment view, automatically apply that segment as a filter
-  // for the KPI strip / shared model. Analytics views show the full picture.
   useEffect(() => {
     if (!cfg) return;
     if (cfg.group === "segment" && cfg.segmentFilter) {
@@ -53,8 +63,10 @@ export function App() {
   if (error) {
     return (
       <div className="state state-error">
-        <h2>Couldn't load Sales Org data</h2>
-        <pre>{error}</pre>
+        <div>
+          <h2>Couldn't load Sales Org data</h2>
+          <pre>{error}</pre>
+        </div>
       </div>
     );
   }
@@ -67,37 +79,43 @@ export function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Sales Org Visualizer</h1>
-        <Tabs views={VIEWS} active={view} onChange={setView} />
+        <div className="app-header-left">
+          <h1 className="app-title">Sales Org Visualizer</h1>
+          <p className="app-subtitle">{subtitle}</p>
+        </div>
         <div className="app-header-actions">
-          <button className="icon-btn" onClick={() => setSearchOpen(true)} title="Search (⌘K)">
+          <button
+            className="btn"
+            onClick={() => setSearchOpen(true)}
+            title="Search (⌘K)"
+            type="button"
+          >
             <span>Search</span>
             <span className="kbd">⌘K</span>
           </button>
         </div>
       </header>
 
+      <div className="tab-bar">
+        <Tabs views={VIEWS} active={view} onChange={setView} />
+      </div>
+
       <KpiStrip />
 
       <div className="toolbar">
         <div className="toolbar-left">
           <button
-            className={"icon-btn" + (railOpen ? " active" : "")}
+            className={"btn" + (railOpen ? " btn-active" : "")}
             onClick={toggleRail}
             aria-pressed={railOpen}
+            type="button"
           >
-            Filters {activeFilterCount > 0 && `(${activeFilterCount})`}
+            Filters {activeFilterCount > 0 && <span className="kbd" style={{ marginLeft: 4 }}>{activeFilterCount}</span>}
           </button>
           {filters.search && (
             <span className="filter-summary">
               search: "{filters.search}"
-              <button
-                className="icon-btn"
-                style={{ padding: "2px 6px" }}
-                onClick={() => setFilters({ search: "" })}
-              >
-                ×
-              </button>
+              <button onClick={() => setFilters({ search: "" })} aria-label="Clear search">×</button>
             </span>
           )}
         </div>

@@ -3,9 +3,8 @@ import views from "./views.json";
 import type { Density, ViewConfigEntry, ViewKey } from "../data/types";
 
 type Palettes = {
-  managers: Record<string, { bg: string; fg: string }>;
-  l1: { bg: string; fg: string };
-  pods: Record<string, string>;
+  managers: Record<string, { accent: string }>;
+  pods: Record<string, { accent: string }>;
   roleTypes: Record<string, string>;
 };
 
@@ -31,52 +30,45 @@ export const VIEW_BY_KEY: Map<ViewKey, ViewConfigEntry> = new Map(
   VIEWS.map((v) => [v.key, v]),
 );
 
-// Hash-based fallback color so unknown keys never break the UI.
-function hashColor(key: string, lightness = 80): string {
+// Hash a string to a stable hue so unknown keys get a deterministic
+// (and tasteful) cool-family color. Keeps the new manager/pod palette
+// extensible without code changes.
+function hashHue(key: string, base = 200, span = 80): number {
   let h = 0;
   for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0;
-  const hue = Math.abs(h) % 360;
-  return `hsl(${hue}, 55%, ${lightness}%)`;
+  return base + (Math.abs(h) % span);
 }
 
-export function podColor(name: string): string {
-  return PALETTES.pods[name] ?? hashColor(name, 86);
+/**
+ * Accent color used for left borders, dots, and small color hints.
+ * For known managers/pods we read from palettes.json. Unknown names
+ * fall back to a hashed cool-family OKLCH so the design stays cohesive.
+ */
+export function podAccent(name: string): string {
+  return PALETTES.pods[name]?.accent ?? `oklch(0.63 0.10 ${hashHue(name)})`;
 }
 
-export function managerColor(name: string): { bg: string; fg: string } {
-  return PALETTES.managers[name] ?? { bg: hashColor(name, 60), fg: "#FFFFFF" };
+export function managerAccent(name: string): string {
+  return PALETTES.managers[name]?.accent ?? `oklch(0.63 0.10 ${hashHue(name)})`;
 }
 
-export function roleColor(roleType: string): string {
-  return PALETTES.roleTypes[roleType] ?? hashColor(roleType, 78);
+export function roleAccent(roleType: string): string {
+  return PALETTES.roleTypes[roleType] ?? `oklch(0.55 0.07 ${hashHue(roleType, 220, 60)})`;
 }
 
-export function readableTextOn(bg: string): string {
-  // Works for hex; for hsl() fall back to dark.
-  if (!bg.startsWith("#")) return "#222";
-  const t = bg.replace("#", "");
-  const r = parseInt(t.slice(0, 2), 16);
-  const g = parseInt(t.slice(2, 4), 16);
-  const b = parseInt(t.slice(4, 6), 16);
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? "#222" : "#fff";
+/**
+ * Soft tint of a pod color for backgrounds. Brings any oklch() down to
+ * a near-white tint while preserving hue family.
+ */
+export function softTint(oklchColor: string, lightness = 0.96, chroma = 0.025): string {
+  // Extract the H from "oklch(L C H)" or "oklch(L C H / A)"
+  const m = oklchColor.match(/oklch\(\s*[\d.]+\s+[\d.]+\s+([\d.]+)/i);
+  const hue = m ? m[1] : "240";
+  return `oklch(${lightness} ${chroma} ${hue})`;
 }
 
-export function tint(hex: string, amount: number): string {
-  if (!hex.startsWith("#")) return hex;
-  const t = hex.replace("#", "");
-  const r = parseInt(t.slice(0, 2), 16);
-  const g = parseInt(t.slice(2, 4), 16);
-  const b = parseInt(t.slice(4, 6), 16);
-  const lift = (n: number) => Math.round(n + (255 - n) * amount);
-  const hex2 = (n: number) => n.toString(16).padStart(2, "0");
-  return `#${hex2(lift(r))}${hex2(lift(g))}${hex2(lift(b))}`;
-}
-
-export function rgba(hex: string, alpha: number): string {
-  if (!hex.startsWith("#")) return hex;
-  const t = hex.replace("#", "");
-  const r = parseInt(t.slice(0, 2), 16);
-  const g = parseInt(t.slice(2, 4), 16);
-  const b = parseInt(t.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+/** Extract just the hue from an oklch() string, defaulting to a cool blue. */
+export function hueOf(oklchColor: string, fallback = 240): number {
+  const m = oklchColor.match(/oklch\(\s*[\d.]+\s+[\d.]+\s+([\d.]+)/i);
+  return m ? Number(m[1]) : fallback;
 }
