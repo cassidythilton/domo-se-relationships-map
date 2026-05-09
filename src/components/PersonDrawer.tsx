@@ -1,5 +1,12 @@
 import { useStore, usePerson } from "../store";
 import { loadBucketOf } from "../store/selectors";
+import {
+  aesCoveredBy,
+  fmtCurrency,
+  fmtPercent,
+  getSeMetric,
+  rosterToDealName,
+} from "../store/observed";
 import { roleAccent } from "../config";
 import { Avatar } from "./Avatar";
 import type { Person } from "../data/types";
@@ -8,8 +15,14 @@ export function PersonDrawer() {
   const id = useStore((s) => s.selectedPersonId);
   const select = useStore((s) => s.selectPerson);
   const model = useStore((s) => s.model);
+  const deals = useStore((s) => s.deals);
   const person = usePerson(id);
   if (!person || !model) return null;
+
+  const dealName = rosterToDealName(person.name);
+  const seMetric = deals ? getSeMetric(deals, person) : null;
+  const covered = deals ? aesCoveredBy(model, deals, person).slice(0, 8) : [];
+  const aeMetric = deals ? deals.byAeName.get(dealName) : null;
 
   const chain: Person[] = [];
   let cursor = model.byId.get(person.manager_name);
@@ -212,6 +225,99 @@ export function PersonDrawer() {
             <p style={{ margin: 0, whiteSpace: "pre-wrap", fontSize: 13, color: "var(--text-primary)" }}>
               {person.notes}
             </p>
+          </div>
+        )}
+
+        {seMetric && (
+          <div className="drawer-section">
+            <h4>Observed pipeline ({deals!.range.label} · NAM)</h4>
+            <ul className="drawer-list">
+              <li className="drawer-row">
+                <span className="label">Open pipeline ACV</span>
+                <span className="value tabular">{fmtCurrency(seMetric.pipelineAcv)}</span>
+              </li>
+              <li className="drawer-row">
+                <span className="label">Open deals</span>
+                <span className="value tabular">{seMetric.openCount}</span>
+              </li>
+              <li className="drawer-row">
+                <span className="label">Closed won ACV</span>
+                <span className="value tabular">{fmtCurrency(seMetric.closedWonAcv)}</span>
+              </li>
+              <li className="drawer-row">
+                <span className="label">Win rate</span>
+                <span className="value tabular">{fmtPercent(seMetric.winRate)}</span>
+              </li>
+            </ul>
+          </div>
+        )}
+
+        {covered.length > 0 && (
+          <div className="drawer-section">
+            <h4>AEs covered ({covered.length})</h4>
+            <ul className="drawer-list">
+              {covered.map((c) => {
+                const target = c.rosterName
+                  ? () => {
+                      const p = model.people.find((x) => x.name === c.rosterName);
+                      if (p) select(p.id);
+                    }
+                  : undefined;
+                return (
+                  <li
+                    key={c.aeName}
+                    className={"drawer-row" + (target ? " clickable" : "")}
+                    onClick={target}
+                  >
+                    <span className="label" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <Avatar name={c.aeName} size="sm" />
+                      <span>
+                        {c.aeName}
+                        {c.forecastManager && (
+                          <span className="muted" style={{ marginLeft: 6, fontSize: 11 }}>
+                            · {c.forecastManager}
+                          </span>
+                        )}
+                      </span>
+                    </span>
+                    <span className="value tabular muted">
+                      {c.dealCount} · {fmtCurrency(c.pipelineAcv)}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
+        {aeMetric && person.tier === "L4" && person.role_type && (
+          <div className="drawer-section">
+            <h4>Observed deal activity ({deals!.range.label})</h4>
+            <ul className="drawer-list">
+              <li className="drawer-row">
+                <span className="label">Total deals</span>
+                <span className="value tabular">{aeMetric.totalDealCount}</span>
+              </li>
+              <li className="drawer-row">
+                <span className="label">Open pipeline</span>
+                <span className="value tabular">{fmtCurrency(aeMetric.pipelineAcv)}</span>
+              </li>
+              {aeMetric.primarySc && (
+                <li className="drawer-row">
+                  <span className="label">Observed primary SC</span>
+                  <span className="value">
+                    {aeMetric.primarySc}{" "}
+                    <span className="muted tabular">({aeMetric.primaryScDealCount} deals)</span>
+                  </span>
+                </li>
+              )}
+              {aeMetric.manager && (
+                <li className="drawer-row">
+                  <span className="label">Forecast Manager</span>
+                  <span className="value">{aeMetric.manager}</span>
+                </li>
+              )}
+            </ul>
           </div>
         )}
       </aside>

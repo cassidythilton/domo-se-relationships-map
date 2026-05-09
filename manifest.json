@@ -13,6 +13,11 @@
       "alias": "salesOrgPeople",
       "dataSetId": "c92d8b58-6104-4407-b5d5-9dbf45142835",
       "fields": []
+    },
+    {
+      "alias": "salesDeals",
+      "dataSetId": "eac44ae6-6463-44ab-ad5a-6294977873ff",
+      "fields": []
     }
   ],
   "collections": [],

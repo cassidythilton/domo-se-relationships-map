@@ -54,6 +54,13 @@
       "densities": [1]
     },
     {
+      "key": "discrepancies",
+      "label": "Discrepancies",
+      "group": "analytics",
+      "defaultDensity": 1,
+      "densities": [1]
+    },
+    {
       "key": "roadmap",
       "label": "Roadmap",
       "group": "reference",

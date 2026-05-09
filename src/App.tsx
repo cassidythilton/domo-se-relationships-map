@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { useStore } from "./store";
 import { useUrlSync } from "./store/url";
 import { loadPeople } from "./data/load";
+import { loadDealsSnapshot } from "./data/deals";
+import { dateRangeFor } from "./data/fiscal";
 import { VIEWS, VIEW_BY_KEY } from "./config";
 import { Tabs } from "./components/Tabs";
 import { DetailToggle } from "./components/DetailToggle";
@@ -9,21 +11,24 @@ import { KpiStrip } from "./components/KpiStrip";
 import { FilterRail } from "./components/FilterRail";
 import { Search } from "./components/Search";
 import { PersonDrawer } from "./components/PersonDrawer";
+import { WindowPicker } from "./components/WindowPicker";
 import { OrgChart } from "./views/OrgChart";
 import { CoverageMatrix } from "./views/CoverageMatrix";
 import { ReverseCoverage } from "./views/ReverseCoverage";
 import { SpecialistMap } from "./views/SpecialistMap";
 import { CapacityLoad } from "./views/CapacityLoad";
+import { Discrepancies } from "./views/Discrepancies";
 import { Roadmap } from "./views/Roadmap";
 
 const VIEW_DESCRIPTIONS: Record<string, string> = {
   scOrg: "Solutions Consulting org chart with manager hierarchy.",
-  corpNL: "Coverage matrix for the Corporate New Logo segment.",
-  corpUpsell: "Coverage matrix for the Corporate Upsell segment.",
-  ent: "Coverage matrix for the Enterprise segment.",
+  corpNL: "Asserted coverage matrix for the Corporate New Logo segment.",
+  corpUpsell: "Asserted coverage matrix for the Corporate Upsell segment.",
+  ent: "Asserted coverage matrix for the Enterprise segment.",
   reverse: "Pick a pod to see every SC covering it, plus the management chain.",
   specialist: "Pod × specialization heatmap. Cells highlight uncovered specializations.",
   capacity: "Per-SC load with target lines. Red = overloaded, grey = slack.",
+  discrepancies: "Where the asserted roster differs from observed Salesforce activity (NAM only).",
   roadmap: "What's intentionally not yet built, and what's coming next.",
 };
 
@@ -41,6 +46,10 @@ export function App() {
   const railOpen = useStore((s) => s.filterRailOpen);
   const toggleRail = useStore((s) => s.toggleFilterRail);
   const setSearchOpen = useStore((s) => s.setSearchOpen);
+  const dealsWindow = useStore((s) => s.dealsWindow);
+  const setDeals = useStore((s) => s.setDeals);
+  const setDealsLoading = useStore((s) => s.setDealsLoading);
+  const setDealsError = useStore((s) => s.setDealsError);
 
   useUrlSync();
 
@@ -49,6 +58,19 @@ export function App() {
       .then(setRows)
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
   }, [setRows, setError]);
+
+  // Lazy-load deals snapshot whenever the window changes.
+  useEffect(() => {
+    let cancelled = false;
+    setDealsLoading(true);
+    const range = dateRangeFor(dealsWindow);
+    loadDealsSnapshot(range)
+      .then((snap) => { if (!cancelled) setDeals(snap); })
+      .catch((e: unknown) => {
+        if (!cancelled) setDealsError(e instanceof Error ? e.message : String(e));
+      });
+    return () => { cancelled = true; };
+  }, [dealsWindow, setDeals, setDealsError, setDealsLoading]);
 
   const cfg = VIEW_BY_KEY.get(view);
   const subtitle = VIEW_DESCRIPTIONS[view] ?? "";
@@ -120,6 +142,7 @@ export function App() {
           )}
         </div>
         <div className="toolbar-right">
+          <WindowPicker />
           {cfg && (
             <DetailToggle
               level={density}
@@ -170,6 +193,8 @@ function renderView(view: string) {
       return <SpecialistMap />;
     case "capacity":
       return <CapacityLoad />;
+    case "discrepancies":
+      return <Discrepancies />;
     case "roadmap":
       return <Roadmap />;
     default:

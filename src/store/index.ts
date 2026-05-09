@@ -10,6 +10,9 @@ import type {
 import { EMPTY_FILTERS } from "../data/types";
 import { normalize } from "../data/normalize";
 import { VIEW_BY_KEY } from "../config";
+import type { DealsSnapshot } from "../data/deals";
+import type { WindowKey } from "../data/fiscal";
+import { DEFAULT_WINDOW } from "../data/fiscal";
 
 export type State = {
   rawRows: RawPerson[] | null;
@@ -22,6 +25,11 @@ export type State = {
   selectedPod: string | null;
   searchOpen: boolean;
   filterRailOpen: boolean;
+  // Deals layer (loaded after roster)
+  dealsWindow: WindowKey;
+  deals: DealsSnapshot | null;
+  dealsLoading: boolean;
+  dealsError: string | null;
 };
 
 export type Actions = {
@@ -36,6 +44,10 @@ export type Actions = {
   setSearchOpen: (open: boolean) => void;
   toggleFilterRail: () => void;
   applyUrl: (params: URLSearchParams) => void;
+  setDealsWindow: (w: WindowKey) => void;
+  setDeals: (snap: DealsSnapshot) => void;
+  setDealsLoading: (loading: boolean) => void;
+  setDealsError: (msg: string | null) => void;
 };
 
 export const useStore = create<State & Actions>((set) => ({
@@ -49,6 +61,10 @@ export const useStore = create<State & Actions>((set) => ({
   selectedPod: null,
   searchOpen: false,
   filterRailOpen: false,
+  dealsWindow: DEFAULT_WINDOW,
+  deals: null,
+  dealsLoading: false,
+  dealsError: null,
 
   setRows: (rows) =>
     set(() => ({
@@ -74,6 +90,11 @@ export const useStore = create<State & Actions>((set) => ({
   selectPod: (pod) => set(() => ({ selectedPod: pod })),
   setSearchOpen: (open) => set(() => ({ searchOpen: open })),
   toggleFilterRail: () => set((s) => ({ filterRailOpen: !s.filterRailOpen })),
+  setDealsWindow: (w) => set(() => ({ dealsWindow: w, deals: null })),
+  setDeals: (snap) => set(() => ({ deals: snap, dealsLoading: false, dealsError: null })),
+  setDealsLoading: (loading) => set(() => ({ dealsLoading: loading })),
+  setDealsError: (msg) => set(() => ({ dealsError: msg, dealsLoading: false })),
+
   applyUrl: (params) =>
     set((s) => {
       const view = (params.get("view") as ViewKey) || s.view;

@@ -110,6 +110,7 @@ export type ViewKey =
   | "reverse"
   | "specialist"
   | "capacity"
+  | "discrepancies"
   | "roadmap";
 
 export type Density = 1 | 2 | 3;
