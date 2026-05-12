@@ -4,7 +4,7 @@
 
 import type { DealsSnapshot, SeMetric } from "../data/deals";
 import type { DerivedModel, Person } from "../data/types";
-import nameMapJson from "../config/nameMap.json";
+import nameMapJson from "../config/nameMap.json" with { type: "json" };
 
 const NAME_MAP: Record<string, string> = nameMapJson as Record<string, string>;
 
@@ -13,8 +13,8 @@ export function rosterToDealName(rosterName: string): string {
   return NAME_MAP[rosterName] ?? rosterName;
 }
 
-/** Build the inverse map for deal-system name -> roster name(s).
- *  A deal name can map to multiple roster rows (rare). */
+/** Build inverse map (deal-system name -> roster name(s)).
+ *  A deal name can map to multiple roster rows in rare cases. */
 function buildInverseMap(): Map<string, string[]> {
   const inv = new Map<string, string[]>();
   for (const [roster, deal] of Object.entries(NAME_MAP)) {
@@ -28,10 +28,7 @@ function buildInverseMap(): Map<string, string[]> {
 const INVERSE_MAP = buildInverseMap();
 
 export function dealNameToRoster(model: DerivedModel, dealName: string): Person | null {
-  // Strip trailing " SC" / " AE" / " CAE" suffixes that Salesforce sometimes appends
   const clean = dealName.replace(/\s+(SC|AE|CAE|CSM)$/i, "").trim();
-
-  // Try inverse alias map first (e.g. "Robert Jusino" -> "Rob Jusino")
   const aliases = INVERSE_MAP.get(clean);
   if (aliases) {
     for (const a of aliases) {
@@ -39,7 +36,6 @@ export function dealNameToRoster(model: DerivedModel, dealName: string): Person 
       if (p) return p;
     }
   }
-  // Fall through to direct match (deal name is the same as roster name)
   return model.byId.get(clean) ?? null;
 }
 
@@ -47,7 +43,6 @@ export function getSeMetric(deals: DealsSnapshot, person: Person): SeMetric | nu
   const dealName = rosterToDealName(person.name);
   return (
     deals.byScName.get(dealName) ??
-    // Try with " SC" suffix that Salesforce sometimes appends
     deals.byScName.get(`${dealName} SC`) ??
     null
   );
@@ -116,19 +111,25 @@ export type Discrepancy =
       dealCount: number;
     }
   | {
-      kind: "asserted_pod_no_observed_coverage";
-      severity: "medium";
-      podLeader: string;
-      asserted: number; // number of AEs asserted in this pod
-      observedDeals: number; // total observed deals where SC = pod leader
-    }
-  | {
       kind: "ae_primary_sc_outside_pod";
       severity: "low";
       aeName: string;
-      assertedPod: string;
+      assertedSe: string;
       observedSc: string;
       observedDealCount: number;
+    }
+  | {
+      kind: "rvp_unknown_avp";
+      severity: "low";
+      rvpName: string;
+      segment: string;
+    }
+  | {
+      kind: "ae_no_covering_se";
+      severity: "medium";
+      aeName: string;
+      segment: string;
+      rvpId: string | null;
     };
 
 const SEV_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
@@ -139,12 +140,11 @@ export function detectDiscrepancies(
 ): Discrepancy[] {
   const out: Discrepancy[] = [];
 
-  // 1. SEs that appear in deals but not in roster (NAM-only because that's
-  //    the deals scope). Filter to those with material activity.
+  // 1. SEs that appear in deals but not in roster (NAM-only).
   for (const m of deals.seMetrics) {
     const matched = dealNameToRoster(model, m.name);
     if (matched) continue;
-    if (m.name.endsWith(" SC")) continue; // suffix variant — already handled
+    if (m.name.endsWith(" SC")) continue;
     const sev = m.pipelineAcv > 250000 || m.dealCount > 30
       ? "high"
       : m.dealCount > 5
@@ -159,9 +159,10 @@ export function detectDiscrepancies(
     });
   }
 
-  // 2. Roster L3 SEs (SC Org segment) with zero recent deals.
+  // 2. Roster SC-org SEs / SAs with zero recent deals.
   for (const p of model.people) {
-    if (p.segment !== "SC Org" || (p.tier !== "L3" && p.tier !== "L2")) continue;
+    if (p.segment !== "SC Org") continue;
+    if (p.roleKind !== "se" && p.roleKind !== "sa") continue;
     const m = getSeMetric(deals, p);
     if (m && m.dealCount > 0) continue;
     out.push({
@@ -188,7 +189,7 @@ export function detectDiscrepancies(
     });
   }
 
-  // 4. Uncovered AEs — open pipeline, no Sales Consultant assigned.
+  // 4. Uncovered AEs in deals (open pipeline, no SC assigned).
   for (const u of deals.uncoveredAes) {
     out.push({
       kind: "uncovered_ae",
@@ -200,35 +201,50 @@ export function detectDiscrepancies(
     });
   }
 
-  // 5. Asserted-pod-vs-observed delta: where the roster says an AE is in pod X
-  //    but their observed primary SC is in a different pod.
-  // Build pod membership from roster: pod name -> set of AE names asserted in it.
-  const podAssertedAes = new Map<string, Set<string>>();
-  for (const p of model.people) {
-    if (p.tier !== "L4" || !p.team_column || !p.role_type) continue;
-    if (!podAssertedAes.has(p.team_column)) podAssertedAes.set(p.team_column, new Set());
-    podAssertedAes.get(p.team_column)!.add(p.name);
-  }
-
+  // 5. AE’s observed primary SC differs from asserted covering SE.
   for (const ae of deals.aeMetrics) {
     if (!ae.primarySc) continue;
     const aeRosterPerson = dealNameToRoster(model, ae.name);
-    if (!aeRosterPerson || !aeRosterPerson.team_column) continue;
+    if (!aeRosterPerson || aeRosterPerson.roleKind !== "ae") continue;
+    if (!aeRosterPerson.coveringSeId) continue;
     const observedScRoster = dealNameToRoster(model, ae.primarySc);
     if (!observedScRoster) continue;
-    // If observed SC's roster name matches the asserted pod (by team_column
-    // OR by name == pod leader), no discrepancy.
-    const podLeader = aeRosterPerson.team_column;
-    if (observedScRoster.name === podLeader) continue;
-    // Skip cases where observed SC is downstream of the pod leader (same pod's other SE)
-    if (observedScRoster.manager_name === podLeader) continue;
+    if (observedScRoster.id === aeRosterPerson.coveringSeId) continue;
+    // Skip cases where the observed SC reports to the same SE manager as the
+    // asserted covering SE (same team — a teammate handled the deal).
+    const assertedSe = model.byId.get(aeRosterPerson.coveringSeId);
+    if (assertedSe && observedScRoster.manager_name === assertedSe.manager_name) continue;
     out.push({
       kind: "ae_primary_sc_outside_pod",
       severity: "low",
       aeName: aeRosterPerson.name,
-      assertedPod: podLeader,
+      assertedSe: assertedSe?.name ?? aeRosterPerson.coveringSeId,
       observedSc: observedScRoster.name,
       observedDealCount: ae.primaryScDealCount,
+    });
+  }
+
+  // 6. RVPs with no AVP mapping (data-cleanup nudges).
+  for (const rvp of model.byRole.rvp) {
+    if (rvp.avpName) continue;
+    out.push({
+      kind: "rvp_unknown_avp",
+      severity: "low",
+      rvpName: rvp.name,
+      segment: rvp.segment,
+    });
+  }
+
+  // 7. Roster AEs with no covering SE (the matrix has them in a row but the
+  //    short-name didn’t resolve to an SE id).
+  for (const a of model.byRole.ae) {
+    if (a.coveringSeId) continue;
+    out.push({
+      kind: "ae_no_covering_se",
+      severity: "medium",
+      aeName: a.name,
+      segment: a.segment,
+      rvpId: a.rvpId,
     });
   }
 
@@ -249,11 +265,13 @@ export function discrepancyKindLabel(kind: Discrepancy["kind"]): string {
     case "ae_in_deals_not_in_roster":
       return "AE in deals — not in roster";
     case "uncovered_ae":
-      return "AE with pipeline — no SC assigned";
-    case "asserted_pod_no_observed_coverage":
-      return "Asserted pod — no observed coverage";
+      return "AE with pipeline — no SE assigned";
     case "ae_primary_sc_outside_pod":
-      return "AE's primary SC is outside their asserted pod";
+      return "AE’s observed SE differs from asserted";
+    case "rvp_unknown_avp":
+      return "RVP — AVP unknown";
+    case "ae_no_covering_se":
+      return "Roster AE — no covering SE";
   }
 }
 

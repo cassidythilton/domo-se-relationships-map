@@ -1,84 +1,54 @@
-import Query from "@domoinc/query";
+// Roster loader. The roster lives in the SovRoster AppDB collection.
+//
+// First run after the SovRoster collection is provisioned, the collection
+// is empty \u2014 we auto-seed it from the inlined v2 CSV (SAMPLE_PEOPLE) so
+// existing data isn't lost in the migration. Subsequent loads read AppDB
+// directly and never touch the bundled sample data.
+//
+// Dev mode (no Domo runtime): loadRoster returns unavailable=true and we
+// fall back to SAMPLE_PEOPLE so `npm run dev` keeps rendering the org.
+
 import type { RawPerson } from "./types";
+import { autoSeedIfEmpty, loadRoster } from "./rosterDb";
+import { rowFromMap } from "./rosterIO";
 
-const SELECT_COLS = [
-  "name",
-  "segment",
-  "tier",
-  "manager_name",
-  "role_type",
-  "team_column",
-  "ae_row",
-  "segment_label",
-  "sort_order",
-  "is_active",
-  "notes",
-  "primary_pod",
-  "backup_pod",
-  "overlay_pods",
-  "primary_alloc_pct",
-  "backup_alloc_pct",
-  "overlay_alloc_pct",
-  "specializations",
-  "target_load_pct",
-  "hire_date",
-  "tenure_months",
-  "ramp_status",
-  "email",
-  "photo_url",
-];
-
-const num = (v: unknown): number => {
-  if (v === null || v === undefined || v === "") return 0;
-  const n = typeof v === "number" ? v : Number(v);
-  return Number.isFinite(n) ? n : 0;
-};
-
-const str = (v: unknown): string => (v === null || v === undefined ? "" : String(v));
-
-const cleanRow = (e: Record<string, unknown>): RawPerson => ({
-  name: str(e.name),
-  segment: str(e.segment),
-  tier: str(e.tier),
-  manager_name: str(e.manager_name),
-  role_type: str(e.role_type),
-  team_column: str(e.team_column),
-  ae_row: str(e.ae_row),
-  segment_label: str(e.segment_label) || str(e.segment),
-  sort_order: num(e.sort_order),
-  is_active: str(e.is_active),
-  notes: str(e.notes),
-  primary_pod: str(e.primary_pod),
-  backup_pod: str(e.backup_pod),
-  overlay_pods: str(e.overlay_pods),
-  primary_alloc_pct: num(e.primary_alloc_pct),
-  backup_alloc_pct: num(e.backup_alloc_pct),
-  overlay_alloc_pct: num(e.overlay_alloc_pct),
-  specializations: str(e.specializations),
-  target_load_pct: e.target_load_pct === undefined || e.target_load_pct === "" ? undefined : num(e.target_load_pct),
-  hire_date: str(e.hire_date),
-  tenure_months: e.tenure_months === undefined || e.tenure_months === "" ? undefined : num(e.tenure_months),
-  ramp_status: str(e.ramp_status),
-  email: str(e.email),
-  photo_url: str(e.photo_url),
-});
+async function bundledSampleAsync(): Promise<RawPerson[]> {
+  const mod = await import("./sampleData");
+  return mod.SAMPLE_PEOPLE.map((r) => rowFromMap(r as Record<string, unknown>)).sort(
+    (a, b) => a.sort_order - b.sort_order,
+  );
+}
 
 export async function loadPeople(): Promise<RawPerson[]> {
-  try {
-    const result = await new Query()
-      .select(SELECT_COLS)
-      .where("is_active")
-      .equals("TRUE")
-      .fetch("salesOrgPeople");
-    const rows: Array<Record<string, unknown>> = Array.isArray(result)
-      ? (result as unknown as Array<Record<string, unknown>>)
-      : (((result as unknown as { rows?: Array<Record<string, unknown>> })?.rows) ?? []);
-    return rows.map(cleanRow).sort((a, b) => a.sort_order - b.sort_order);
-  } catch (err) {
+  // 1. Try AppDB
+  let result = await loadRoster();
+
+  // 2. AppDB unreachable \u2014 dev mode fallback
+  if (result.unavailable) {
     if (import.meta.env.DEV) {
-      const sample = await import("./sampleData").then((m) => m.SAMPLE_PEOPLE);
-      return sample.map((r) => cleanRow(r as Record<string, unknown>)).sort((a, b) => a.sort_order - b.sort_order);
+      return bundledSampleAsync();
     }
-    throw err;
+    throw new Error(
+      result.error ?? "Roster (SovRoster) unavailable and no dev fallback active.",
+    );
   }
+
+  // 3. AppDB reachable but empty \u2014 auto-seed from bundled v2 CSV
+  if (result.rows.length === 0) {
+    const seed = await bundledSampleAsync();
+    const seedResult = await autoSeedIfEmpty(seed);
+    if (seedResult.seeded) {
+      // Re-read so we have the fresh document IDs
+      result = await loadRoster();
+      if (result.rows.length > 0) return result.rows;
+      // If for any reason the re-read returns empty, just use the seed
+      return seed;
+    }
+    if (seedResult.error) {
+      console.warn("[roster] seed attempt failed:", seedResult.error);
+    }
+    return seed;
+  }
+
+  return result.rows;
 }

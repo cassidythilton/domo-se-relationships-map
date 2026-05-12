@@ -1,115 +1,67 @@
 import { useMemo } from "react";
 import { useStore } from "../store";
-import { applyFilters, buildKpis } from "../store/selectors";
-import type { LoadBucket } from "../data/types";
+import { buildKpis } from "../store/selectors";
 
 export function KpiStrip() {
   const model = useStore((s) => s.model);
-  const filters = useStore((s) => s.filters);
-  const setFilters = useStore((s) => s.setFilters);
-  const setView = useStore((s) => s.setView);
-  const selectPod = useStore((s) => s.selectPod);
-
-  const filtered = useMemo(
-    () => (model ? applyFilters(model, filters) : []),
-    [model, filters],
-  );
-  const kpis = useMemo(() => (model ? buildKpis(model, filtered) : null), [model, filtered]);
+  const kpis = useMemo(() => (model ? buildKpis(model) : null), [model]);
   if (!model || !kpis) return null;
 
-  const setLoad = (bucket: LoadBucket | null) => setFilters({ loadBucket: bucket });
-  const jumpToFirstUncovered = () => {
-    const target = kpis.podsNoPrimary[0] ?? kpis.podsNoBackup[0] ?? model.pods[0];
-    if (target) selectPod(target.name);
-    setView("reverse");
-  };
-  const jumpToSpecialist = () => setView("specialist");
+  const coverageStatus =
+    kpis.coveragePct >= 95 ? "good" : kpis.coveragePct >= 80 ? "warn" : "danger";
+
+  // "Capacity" pill: how many SEs are at-or-near target vs overloaded vs slack.
+  // Show overloaded count as the headline number; sub-line gives the mix.
+  const capacityTone =
+    kpis.overloadedSes === 0
+      ? "good"
+      : kpis.overloadedSes > 2
+        ? "danger"
+        : "warn";
 
   return (
-    <div className="kpi-strip" role="group" aria-label="Coverage KPIs">
-      <Kpi
-        label="Coverage"
-        value={kpis.coveragePct === null ? "—" : `${kpis.coveragePct}%`}
-        sub={`${model.pods.length - kpis.podsNoPrimary.length}/${model.pods.length} pods have a Primary`}
-        warn={kpis.coveragePct !== null && kpis.coveragePct < 100}
-        good={kpis.coveragePct === 100}
-        onClick={jumpToFirstUncovered}
+    <div className="kpi-strip" role="region" aria-label="Coverage health">
+      <Pill
+        tone={coverageStatus}
+        label="AEs covered"
+        value={`${kpis.coveragePct}%`}
+        sub={`${kpis.coveredAes} of ${kpis.totalAes}`}
       />
-      <Kpi
-        label="Backup coverage"
-        value={kpis.backupCoveragePct === null ? "—" : `${kpis.backupCoveragePct}%`}
-        sub={`${kpis.podsNoBackup.length} pods missing a Backup`}
-        warn={kpis.backupCoveragePct !== null && kpis.backupCoveragePct < 80}
-        good={kpis.backupCoveragePct === 100}
-        onClick={jumpToFirstUncovered}
+      <Pill
+        tone={kpis.floaters === 0 ? "good" : kpis.floaters > 3 ? "warn" : "neutral"}
+        label="Floaters"
+        value={String(kpis.floaters)}
+        sub={kpis.floaters === 0 ? "all placed" : "no SE assigned"}
       />
-      <Kpi
-        label="SC : pod (Primary)"
-        value={kpis.ratioPrimary === null ? "—" : kpis.ratioPrimary.toFixed(2)}
-        sub={kpis.ratioAll === null ? "" : `All roles ratio: ${kpis.ratioAll.toFixed(2)}`}
+      <Pill
+        tone={capacityTone}
+        label="Overloaded SEs"
+        value={String(kpis.overloadedSes)}
+        sub={`${kpis.balancedSes} on target · ${kpis.slackSes} slack · median ${kpis.medianLoadPct}%`}
       />
-      <Kpi
-        label="Overloaded SCs"
-        value={String(kpis.overloaded)}
-        sub="Load > 100%"
-        danger={kpis.overloaded > 0}
-        active={filters.loadBucket === "overloaded"}
-        onClick={() => setLoad(filters.loadBucket === "overloaded" ? null : "overloaded")}
-      />
-      <Kpi
-        label="Slack SCs"
-        value={String(kpis.slack)}
-        sub="Load < 60%"
-        warn={kpis.slack > 0}
-        active={filters.loadBucket === "slack"}
-        onClick={() => setLoad(filters.loadBucket === "slack" ? null : "slack")}
-      />
-      {model.hasSpecializationData && (
-        <Kpi
-          label="Specialist gaps"
-          value={kpis.specialistGaps === null ? "—" : String(kpis.specialistGaps)}
-          sub="Pod × specialization not covered"
-          warn={(kpis.specialistGaps ?? 0) > 0}
-          onClick={jumpToSpecialist}
-        />
-      )}
     </div>
   );
 }
 
-type KpiProps = {
+function Pill({
+  tone,
+  label,
+  value,
+  sub,
+}: {
+  tone: "good" | "warn" | "danger" | "neutral";
   label: string;
   value: string;
-  sub?: string;
-  warn?: boolean;
-  danger?: boolean;
-  good?: boolean;
-  active?: boolean;
-  onClick?: () => void;
-};
-
-function Kpi({ label, value, sub, warn, danger, good, active, onClick }: KpiProps) {
-  const classes = [
-    "kpi",
-    onClick ? "kpi-clickable" : "",
-    warn ? "kpi-warn" : "",
-    danger ? "kpi-danger" : "",
-    good ? "kpi-good" : "",
-    active ? "kpi-active" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-  const Tag = onClick ? "button" : "div";
+  sub: string;
+}) {
   return (
-    <Tag
-      className={classes}
-      onClick={onClick}
-      type={onClick ? "button" : undefined}
-      aria-pressed={onClick ? active ?? false : undefined}
-    >
-      <span className="kpi-label">{label}</span>
-      <span className="kpi-value">{value}</span>
-      {sub && <span className="kpi-sub">{sub}</span>}
-    </Tag>
+    <div className={`kpi-pill kpi-${tone}`}>
+      <div className="kpi-pill-dot" aria-hidden="true" />
+      <div className="kpi-pill-body">
+        <div className="kpi-pill-value">{value}</div>
+        <div className="kpi-pill-label">{label}</div>
+        <div className="kpi-pill-sub">{sub}</div>
+      </div>
+    </div>
   );
 }

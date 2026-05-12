@@ -22,7 +22,7 @@ export function WindowPicker() {
   return (
     <div
       className="window-picker"
-      title={`Deals scope: NAM, ${range.label} (${range.start.toISOString().slice(0, 10)} \u2192 ${range.end.toISOString().slice(0, 10)})`}
+      title={`Deals scope: NAM, ${range.label} (${range.start.toISOString().slice(0, 10)} → ${range.end.toISOString().slice(0, 10)})`}
     >
       <span className="window-label">
         Deals window

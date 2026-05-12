@@ -1,4 +1,4 @@
-import { roleAccent, softTint } from "../config";
+import { roleStyle } from "../config";
 
 type Props = {
   roleTypes: string[];
@@ -9,13 +9,15 @@ export function Legend({ roleTypes }: Props) {
   return (
     <div className="legend" aria-label="Role type legend">
       {roleTypes.map((t) => {
-        const accent = roleAccent(t);
+        const r = roleStyle(t);
         return (
           <div key={t} className="legend-item">
             <span
               className="legend-swatch"
-              style={{ background: softTint(accent, 0.93, 0.03), boxShadow: `0 0 0 2px ${accent} inset` }}
-            />
+              style={{ background: r.fill, borderColor: r.border, color: r.dot }}
+            >
+              <span className="legend-dot" style={{ background: r.dot }} />
+            </span>
             <span className="legend-label">{t}</span>
           </div>
         );

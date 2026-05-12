@@ -1,5 +1,5 @@
-import { useStore, usePerson } from "../store";
-import { loadBucketOf } from "../store/selectors";
+import { useStore } from "../store";
+import { managerChain } from "../data/normalize";
 import {
   aesCoveredBy,
   fmtCurrency,
@@ -7,153 +7,207 @@ import {
   getSeMetric,
   rosterToDealName,
 } from "../store/observed";
-import { roleAccent } from "../config";
+import { roleStyle } from "../config";
 import { Avatar } from "./Avatar";
 import type { Person } from "../data/types";
+import { personTitle, segmentLabel } from "../data/types";
 
 export function PersonDrawer() {
-  const id = useStore((s) => s.selectedPersonId);
-  const select = useStore((s) => s.selectPerson);
+  const sel = useStore((s) => s.selection);
+  const setOpen = useStore((s) => s.setDrawerOpen);
+  const focusOn = useStore((s) => s.focusOnPerson);
   const model = useStore((s) => s.model);
   const deals = useStore((s) => s.deals);
-  const person = usePerson(id);
-  if (!person || !model) return null;
+  const open = useStore((s) => s.drawerOpen);
+  const person =
+    sel?.kind === "person" && model ? model.byId.get(sel.id) ?? null : null;
+  if (!person || !model || !open) return null;
+  const close = () => setOpen(false);
+  // Clicking any related person in the drawer jumps to the Focus lens.
+  const select = (id: string | null) => {
+    if (id) focusOn(id);
+    else close();
+  };
 
   const dealName = rosterToDealName(person.name);
   const seMetric = deals ? getSeMetric(deals, person) : null;
   const covered = deals ? aesCoveredBy(model, deals, person).slice(0, 8) : [];
   const aeMetric = deals ? deals.byAeName.get(dealName) : null;
 
-  const chain: Person[] = [];
-  let cursor = model.byId.get(person.manager_name);
-  while (cursor) {
-    chain.push(cursor);
-    if (cursor.manager_name === cursor.name) break;
-    cursor = model.byId.get(cursor.manager_name);
-  }
+  const chain = managerChain(model, person.id);
+  const directReports = (model.reportsByManager.get(person.id) ?? [])
+    .map((id) => model.byId.get(id))
+    .filter((p): p is Person => !!p);
 
-  const directReports = model.people.filter((p) => p.manager_name === person.name);
-  const bucket = loadBucketOf(person);
-  // Scale: render up to 150% so overload bars stay visible
-  const SCALE = 150;
-  const widthPct = Math.min((person.loadSum / SCALE) * 100, 100);
+  // For SEs we show their covered AEs from the asserted roster.
+  const assertedCovers =
+    person.roleKind === "se" || person.roleKind === "sa"
+      ? (model.coveredAesBySe.get(person.id) ?? [])
+          .map((id) => model.byId.get(id))
+          .filter((p): p is Person => !!p)
+      : [];
 
-  const rampClass = (person.ramp_status || "").toLowerCase();
-  const showRampChip = rampClass && rampClass !== "active";
+  // For AEs we show their covering SE.
+  const coveringSe =
+    person.roleKind === "ae" && person.coveringSeId
+      ? model.byId.get(person.coveringSeId) ?? null
+      : null;
+
+  const rstyle = roleStyle(person.roleType || "");
+
+  // For AE selections, render the dual chain (SE + Sales) before everything else.
+  const isAe = person.roleKind === "ae";
+  const rvp = person.rvpId ? model.byId.get(person.rvpId) : null;
 
   return (
-    <div className="drawer-overlay" onClick={() => select(null)}>
+    <div className="drawer-overlay" onClick={close}>
       <aside
         className="drawer"
         role="dialog"
-        aria-label={`Details for ${person.name}`}
+        aria-label={`Details for ${person.displayName}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="drawer-header">
-          <Avatar name={person.name} roleType={person.role_type} size="lg" />
+          <Avatar name={person.displayName} roleType={person.roleType} size="lg" />
           <div className="drawer-header-text">
-            <h3 className="drawer-title">{person.name}</h3>
+            <h3 className="drawer-title">{person.displayName}</h3>
             <div className="drawer-sub">
-              {person.role_type && (
+              <span className="chip chip-tier">{roleLabel(person.roleKind)}</span>
+              {person.roleType && (
                 <span
                   className="chip chip-role"
-                  style={{ ["--role-color" as string]: roleAccent(person.role_type) }}
+                  style={{
+                    background: rstyle.fill,
+                    borderColor: rstyle.border,
+                    color: rstyle.text,
+                    ["--role-color" as string]: rstyle.dot,
+                  }}
                 >
-                  {person.role_type}
+                  {person.roleType}
                 </span>
               )}
-              <span>{person.tier}</span>
-              <span>•</span>
-              <span>{person.segment}</span>
-              {showRampChip && <span className={`chip chip-status ${rampClass}`}>{person.ramp_status}</span>}
+              <span className="muted">{segmentLabel(person.segment)}</span>
             </div>
             {person.email && (
               <div className="drawer-sub" style={{ marginTop: 4 }}>
-                <a href={`mailto:${person.email}`} style={{ color: "var(--accent-text)", textDecoration: "none" }}>
+                <a href={`mailto:${person.email}`} className="drawer-mail">
                   {person.email}
                 </a>
               </div>
             )}
+            <div className="drawer-actions">
+              <button
+                type="button"
+                className="btn btn-active"
+                onClick={() => focusOn(person.id)}
+              >
+                Open in Focus
+              </button>
+            </div>
           </div>
-          <button className="drawer-close" onClick={() => select(null)} aria-label="Close">
+          <button className="drawer-close" onClick={close} aria-label="Close">
             ×
           </button>
         </div>
 
-        {person.tier === "L4" && (
+        {isAe && (coveringSe || rvp) && (
           <div className="drawer-section">
-            <h4>Coverage</h4>
-            <ul className="drawer-list">
-              <li className="drawer-row">
-                <span className="label">Primary pod</span>
-                <span className="value">
-                  {person.primaryPod ? (
-                    <>
-                      <span className="chip chip-primary">{person.primaryPod}</span>
-                      <span className="muted tabular">{person.primary_alloc_pct ?? 0}%</span>
-                    </>
-                  ) : (
-                    <span className="muted">none</span>
-                  )}
-                </span>
-              </li>
-              <li className="drawer-row">
-                <span className="label">Backup pod</span>
-                <span className="value">
-                  {person.backupPod ? (
-                    <>
-                      <span className="chip chip-backup">{person.backupPod}</span>
-                      <span className="muted tabular">{person.backup_alloc_pct ?? 0}%</span>
-                    </>
-                  ) : (
-                    <span className="muted">none</span>
-                  )}
-                </span>
-              </li>
-              <li className="drawer-row">
-                <span className="label">Overlay pods</span>
-                <span className="value">
-                  {person.overlayPods.length > 0 ? (
-                    <>
-                      <span className="chip-row" style={{ justifyContent: "flex-end" }}>
-                        {person.overlayPods.map((p) => (
-                          <span key={p} className="chip chip-overlay">{p}</span>
-                        ))}
-                      </span>
-                      <span className="muted tabular">{person.overlay_alloc_pct ?? 0}%</span>
-                    </>
-                  ) : (
-                    <span className="muted">none</span>
-                  )}
-                </span>
-              </li>
-            </ul>
-            <div className="load-gauge">
-              <div className="load-bar">
-                <div
-                  className={`load-bar-fill load-${bucket}`}
-                  style={{ width: `${widthPct}%` }}
-                />
+            <h4>Coverage chain</h4>
+            <div className="drawer-dual">
+              <div className="drawer-dual-side">
+                <span className="drawer-dual-label">SE side</span>
+                {coveringSe ? (
+                  <button
+                    type="button"
+                    className="drawer-dual-pill"
+                    onClick={() => select(coveringSe.id)}
+                  >
+                    <Avatar name={coveringSe.displayName} size="sm" />
+                    <span>
+                      <span className="drawer-dual-name">{coveringSe.displayName}</span>
+                      <span className="drawer-dual-sub">SE</span>
+                    </span>
+                  </button>
+                ) : (
+                  <span className="drawer-dual-empty">no SE assigned</span>
+                )}
+                {chain.length > 0 && (
+                  <span className="drawer-dual-chain">
+                    {chain
+                      .map((c) => c.name)
+                      .reverse()
+                      .slice(1)
+                      .join(" → ")}
+                  </span>
+                )}
               </div>
-              <div className="load-meta">
-                <span>
-                  Total load <strong>{person.loadSum}%</strong>
-                </span>
-                <span>Target {person.targetLoad}%</span>
+              <div className="drawer-dual-side">
+                <span className="drawer-dual-label">Sales side</span>
+                {rvp ? (
+                  <button
+                    type="button"
+                    className="drawer-dual-pill"
+                    onClick={() => select(rvp.id)}
+                  >
+                    <Avatar name={rvp.displayName} size="sm" />
+                    <span>
+                      <span className="drawer-dual-name">{rvp.displayName}</span>
+                      <span className="drawer-dual-sub">RVP</span>
+                    </span>
+                  </button>
+                ) : (
+                  <span className="drawer-dual-empty">no RVP</span>
+                )}
+                {rvp?.avpName && (
+                  <span className="drawer-dual-chain">{rvp.avpName} (AVP)</span>
+                )}
               </div>
             </div>
           </div>
         )}
 
-        {person.specializationList.length > 0 && (
+        {assertedCovers.length > 0 && (
           <div className="drawer-section">
-            <h4>Specializations</h4>
-            <div className="chip-row">
-              {person.specializationList.map((s) => (
-                <span key={s} className="chip chip-spec">
-                  {s}
-                </span>
+            <h4>AEs covered (asserted) — {assertedCovers.length}</h4>
+            <ul className="drawer-list">
+              {assertedCovers.map((a) => (
+                <li
+                  key={a.id}
+                  className="drawer-row clickable"
+                  onClick={() => select(a.id)}
+                >
+                  <span className="label drawer-row-name">
+                    <Avatar name={a.displayName} size="sm" />
+                    <span>
+                      {a.displayName}
+                      {a.roleType && (
+                        <span className="muted" style={{ marginLeft: 6, fontSize: 11 }}>
+                          · {a.roleType}
+                        </span>
+                      )}
+                    </span>
+                  </span>
+                  <span className="value muted">
+                    {a.rvpId ? a.rvpId : "no RVP"}
+                  </span>
+                </li>
               ))}
+            </ul>
+          </div>
+        )}
+
+        {coveringSe && (
+          <div className="drawer-section">
+            <h4>Covered by</h4>
+            <div
+              className="drawer-row clickable"
+              onClick={() => select(coveringSe.id)}
+            >
+              <span className="label drawer-row-name">
+                <Avatar name={coveringSe.displayName} size="sm" />
+                {coveringSe.displayName}
+              </span>
+              <span className="value muted">{coveringSe.manager_name}</span>
             </div>
           </div>
         )}
@@ -168,63 +222,32 @@ export function PersonDrawer() {
                   className="drawer-row clickable"
                   onClick={() => select(m.id)}
                 >
-                  <span className="label" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <Avatar name={m.name} size="sm" />
-                    {m.name}
+                  <span className="label drawer-row-name">
+                    <Avatar name={m.displayName} size="sm" />
+                    {m.displayName}
                   </span>
-                  <span className="value">
-                    <span className="chip">{m.tier}</span>
-                  </span>
+                  <span className="value muted">{m.tier}</span>
                 </li>
               ))}
             </ul>
           </div>
         )}
 
-        {directReports.length > 0 && (
+        {directReports.length > 0 && person.roleKind !== "ae" && (
           <div className="drawer-section">
             <h4>Direct reports ({directReports.length})</h4>
             <div className="chip-row">
               {directReports.map((r) => (
-                <span
+                <button
                   key={r.id}
-                  className="chip"
-                  style={{ cursor: "pointer" }}
+                  type="button"
+                  className="chip chip-clickable"
                   onClick={() => select(r.id)}
                 >
-                  {r.name}
-                </span>
+                  {r.displayName}
+                </button>
               ))}
             </div>
-          </div>
-        )}
-
-        {(person.hire_date || person.tenure_months !== undefined) && (
-          <div className="drawer-section">
-            <h4>People detail</h4>
-            <ul className="drawer-list">
-              {person.hire_date && (
-                <li className="drawer-row">
-                  <span className="label">Hire date</span>
-                  <span className="value tabular">{person.hire_date}</span>
-                </li>
-              )}
-              {person.tenure_months !== undefined && (
-                <li className="drawer-row">
-                  <span className="label">Tenure</span>
-                  <span className="value tabular">{person.tenure_months} months</span>
-                </li>
-              )}
-            </ul>
-          </div>
-        )}
-
-        {person.notes && (
-          <div className="drawer-section">
-            <h4>Notes</h4>
-            <p style={{ margin: 0, whiteSpace: "pre-wrap", fontSize: 13, color: "var(--text-primary)" }}>
-              {person.notes}
-            </p>
           </div>
         )}
 
@@ -254,7 +277,7 @@ export function PersonDrawer() {
 
         {covered.length > 0 && (
           <div className="drawer-section">
-            <h4>AEs covered ({covered.length})</h4>
+            <h4>AEs in deals ({covered.length})</h4>
             <ul className="drawer-list">
               {covered.map((c) => {
                 const target = c.rosterName
@@ -269,7 +292,7 @@ export function PersonDrawer() {
                     className={"drawer-row" + (target ? " clickable" : "")}
                     onClick={target}
                   >
-                    <span className="label" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span className="label drawer-row-name">
                       <Avatar name={c.aeName} size="sm" />
                       <span>
                         {c.aeName}
@@ -290,7 +313,7 @@ export function PersonDrawer() {
           </div>
         )}
 
-        {aeMetric && person.tier === "L4" && person.role_type && (
+        {aeMetric && person.roleKind === "ae" && (
           <div className="drawer-section">
             <h4>Observed deal activity ({deals!.range.label})</h4>
             <ul className="drawer-list">
@@ -304,7 +327,7 @@ export function PersonDrawer() {
               </li>
               {aeMetric.primarySc && (
                 <li className="drawer-row">
-                  <span className="label">Observed primary SC</span>
+                  <span className="label">Observed primary SE</span>
                   <span className="value">
                     {aeMetric.primarySc}{" "}
                     <span className="muted tabular">({aeMetric.primaryScDealCount} deals)</span>
@@ -320,7 +343,20 @@ export function PersonDrawer() {
             </ul>
           </div>
         )}
+
+        {person.notes && (
+          <div className="drawer-section">
+            <h4>Notes</h4>
+            <p className="drawer-notes">{person.notes}</p>
+          </div>
+        )}
       </aside>
     </div>
   );
+}
+
+function roleLabel(kind: Person["roleKind"]): string {
+  // Floater AEs are still "Account Executive" by title \u2014 they're just
+  // unplaced in the matrix. The Discrepancies lens flags that.
+  return personTitle({ roleKind: kind });
 }

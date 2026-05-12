@@ -1,0 +1,34 @@
+{
+  "_comment": "AVP → RVP → Segment chain. Best-guess mapping derived from on-screenshot annotations and the user's confirmed AVP list (Keith White / John Pasalano / Andrew Rich / Danny Gardner). RVPs whose AVP is unknown are listed with avp=null; the Discrepancies lens surfaces these and suggests fixes from the live user-profile dataset.",
+  "avps": [
+    { "name": "Keith White",   "shortName": "Keith White" },
+    { "name": "John Pasalano", "shortName": "John Pasalano" },
+    { "name": "Andrew Rich",   "shortName": "Andrew Rich" },
+    { "name": "Danny Gardner", "shortName": "Danny Gardner" }
+  ],
+  "rvps": [
+    { "rosterName": "Doug Hut",         "fullName": "Doug Hut",         "teamColumn": "Doug",                "segment": "Corp NL",     "avp": "John Pasalano" },
+    { "rosterName": "Cameron Housley",  "fullName": "Cameron Housley",  "teamColumn": "Cameron",             "segment": "Corp NL",     "avp": "Andrew Rich" },
+    { "rosterName": "Dave Bauerle",     "fullName": "Dave Bauerle",     "teamColumn": "Dave B",              "segment": "Corp NL",     "avp": "Keith White" },
+    { "rosterName": "Ty Yagi",          "fullName": "Ty Yagi",          "teamColumn": "Ty Yagi Ecosystem",   "segment": "Corp NL",     "avp": "Andrew Rich" },
+    { "rosterName": "Nate Enderle",     "fullName": "Nate Enderle",     "teamColumn": "Nate Ecosystem",      "segment": "Corp NL",     "avp": "Keith White" },
+    { "rosterName": "Mike Harding",     "fullName": "Mike Harding",     "teamColumn": "Mike H",              "segment": "Corp NL",     "avp": "Danny Gardner" },
+    { "rosterName": "Brock",            "fullName": "Brock Kennick",    "teamColumn": "Brock",               "segment": "Corp Upsell", "avp": "Keith White" },
+    { "rosterName": "Sione",            "fullName": "Sione Havili",     "teamColumn": "Sione",               "segment": "Corp Upsell", "avp": "John Pasalano" },
+    { "rosterName": "Eric",             "fullName": "Eric Borland",     "teamColumn": "Eric",                "segment": "Corp Upsell", "avp": "John Pasalano" },
+    { "rosterName": "Jordan",           "fullName": "Jordan Kohler",    "teamColumn": "Jordan",              "segment": "Corp Upsell", "avp": "Andrew Rich" },
+    { "rosterName": "Taylor",           "fullName": "Taylor Rust",      "teamColumn": "Taylor",              "segment": "ENT",         "avp": null },
+    { "rosterName": "Casey",            "fullName": "Casey Morgan",     "teamColumn": "Casey",               "segment": "ENT",         "avp": null }
+  ],
+  "segmentLeads": [
+    { "segment": "Corp NL",     "label": "Corp New Logo",        "leadName": "Dan Wentworth", "scTeamSegment": "Corp NL",     "seToAeRatio": 4 },
+    { "segment": "Corp Upsell", "label": "Corp Upsell",          "leadName": "Tyler Clark",   "scTeamSegment": "Corp Upsell", "seToAeRatio": 3 },
+    { "segment": "ENT",         "label": "Enterprise / SR Corp", "leadName": "Chris Hunter",  "scTeamSegment": "Ent/SR Corp", "seToAeRatio": 3 }
+  ],
+  "saTeam": {
+    "leadName": "Laura Qualey",
+    "label": "Solutions Architects",
+    "scTeamSegment": "SC Org"
+  },
+  "scOrgRoot": "Cassidy Hilton"
+}

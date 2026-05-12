@@ -1,0 +1,1872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Shape A — POC Architects as first-class citizens (mock)</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* =========================================================
+     Mirrors src/styles/index.css token system. Shape A overlay
+     additions are at the bottom of the stylesheet.
+     ========================================================= */
+  :root {
+    --font-stack: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+    --bg:             #F1F6FA;
+    --surface:        #FFFFFF;
+    --surface-hover:  oklch(0.979 0.004 240);
+
+    --text-primary:   #3F454D;
+    --text-secondary: #68737F;
+    --text-muted:     oklch(0.60 0.012 250);
+
+    --border:         #B7C1CB;
+    --border-light:   #DCE4EA;
+    --border-soft:    oklch(0.94 0.008 240);
+
+    --accent:         #99CCEE;
+    --accent-soft:    oklch(0.94 0.025 230);
+    --accent-muted:   oklch(0.816 0.065 230 / 0.18);
+    --accent-pressed: #7AB3D8;
+    --accent-text:    oklch(0.45 0.10 230);
+
+    --avatar-bg:   #3F454D;
+    --avatar-text: #FFFFFF;
+
+    /* Role-type fills (palettes.json) */
+    --role-corpnl-fill:   #F1F6FA; --role-corpnl-border: #B7C1CB; --role-corpnl-text: #3F454D; --role-corpnl-dot: #68737F;
+    --role-newlogo-fill:  #F1ECF6; --role-newlogo-border:#C5BAD9; --role-newlogo-text:#3F2F5F; --role-newlogo-dot:#776CB0;
+    --role-upsell-fill:   #FFF0DD; --role-upsell-border: #F4D2A4; --role-upsell-text: #7A4A0E; --role-upsell-dot: #FF9922;
+    --role-eco-fill:      #E8F3EC; --role-eco-border:    #B5D9C2; --role-eco-text:    #2C5A3D; --role-eco-dot:    #ADD4C1;
+    --role-isv-fill:      #E0F0FA; --role-isv-border:    #A8CFE5; --role-isv-text:    #2C5A7A; --role-isv-dot:    #7AB3D8;
+    --role-de-fill:       #FAF1E0; --role-de-border:     #E2CFA7; --role-de-text:     #7A5A14; --role-de-dot:     #D6A859;
+    --role-extra-fill:    #FCEBEC; --role-extra-border:  #E8B5BB; --role-extra-text:  #7A2C32; --role-extra-dot:  #D86C75;
+
+    /* Manager accents */
+    --mgr-dan:    #776CB0;
+    --mgr-tyler:  #FF9922;
+    --mgr-chris:  #7AB3D8;
+    --mgr-laura:  #ADD4C1;
+
+    --shadow:
+      0 0 0 1px oklch(0.374 0.014 256 / 0.06),
+      0 1px 2px -1px oklch(0.374 0.014 256 / 0.06),
+      0 2px 4px 0 oklch(0.374 0.014 256 / 0.04);
+    --shadow-hover:
+      0 0 0 1px oklch(0.374 0.014 256 / 0.08),
+      0 2px 4px -1px oklch(0.374 0.014 256 / 0.08),
+      0 4px 12px 0 oklch(0.374 0.014 256 / 0.06);
+    --shadow-selected:
+      0 0 0 2px var(--accent),
+      0 0 0 6px var(--accent-muted);
+
+    --radius-card: 10px;
+    --radius-btn: 6px;
+    --radius-pill: 999px;
+
+    /* ----- Shape A — POC Architect overlay tokens ----- */
+    --poc-mint:        #ADD4C1;            /* base SA accent (Laura's manager hue) */
+    --poc-mint-mark:   oklch(0.66 0.085 165); /* slightly darker mint, used for diamond glyphs over chips */
+    --poc-mint-soft:   oklch(0.97 0.018 160);
+    --poc-mint-text:   oklch(0.40 0.060 160);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: var(--font-stack);
+    font-size: 13px;
+    color: var(--text-primary);
+    background: var(--bg);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- Mock chrome ---------- */
+  .mock-doc { max-width: 1620px; margin: 0 auto; padding: 24px; }
+  .mock-h1 { font-size: 22px; font-weight: 700; margin: 0 0 4px; }
+  .mock-sub { font-size: 13px; color: var(--text-secondary); margin: 0 0 20px; max-width: 900px; }
+  .mock-section { margin: 32px 0 48px; }
+  .mock-state-label {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--text-primary); color: white;
+    padding: 6px 12px;
+    border-radius: var(--radius-pill);
+    font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    margin-bottom: 12px;
+  }
+  .mock-state-num { background: var(--accent); color: var(--text-primary); width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: 700; }
+  .mock-h2 { font-size: 16px; font-weight: 700; margin: 0 0 4px; color: var(--text-primary); }
+  .mock-state-sub { font-size: 13px; color: var(--text-secondary); margin: 0 0 16px; max-width: 900px; }
+
+  /* Shape-A annotation callouts — magenta to be unambiguously "annotation, not part of the UI" */
+  .annot {
+    position: absolute; z-index: 5;
+    background: oklch(0.32 0.13 340 / 0.96);
+    color: white;
+    padding: 6px 9px;
+    border-radius: 6px;
+    font-size: 11px; font-weight: 600;
+    box-shadow: 0 4px 12px oklch(0 0 0 / 0.18);
+    pointer-events: none;
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+  }
+  .annot::after {
+    content: "";
+    position: absolute;
+    width: 8px; height: 8px;
+    background: oklch(0.32 0.13 340 / 0.96);
+    transform: rotate(45deg);
+  }
+  .annot-l::after { left: -3px; top: 50%; margin-top: -4px; }
+  .annot-r::after { right: -3px; top: 50%; margin-top: -4px; }
+  .annot-t::after { top: -3px; left: 18px; }
+  .annot-b::after { bottom: -3px; left: 18px; }
+
+  /* ---------- App shell mirror ---------- */
+  .frame {
+    background: var(--bg);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: var(--shadow-hover);
+    position: relative;
+  }
+  .app-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px;
+    background: oklch(1 0 0 / 0.92);
+    border-bottom: 1px solid var(--border-light);
+  }
+  .app-title { font-size: 18px; font-weight: 700; margin: 0; }
+  .app-subtitle { font-size: 11px; color: var(--text-secondary); font-weight: 300; margin: 0; }
+  .app-header-actions { display: flex; gap: 8px; align-items: center; }
+  .pill-btn {
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-btn);
+    padding: 6px 10px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    box-shadow: var(--shadow);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+
+  /* KPI strip */
+  .kpi-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 12px 20px; background: var(--bg); border-bottom: 1px solid var(--border-light); }
+  .kpi { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--surface); border-radius: var(--radius-card); box-shadow: var(--shadow); }
+  .kpi-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .kpi-good .kpi-dot { background: oklch(0.52 0.06 155); box-shadow: 0 0 0 3px oklch(0.943 0.025 155); }
+  .kpi-warn .kpi-dot { background: oklch(0.58 0.11 60); box-shadow: 0 0 0 3px oklch(0.96 0.035 75); }
+  .kpi-danger .kpi-dot { background: oklch(0.59 0.16 20); box-shadow: 0 0 0 3px oklch(0.96 0.04 20); }
+  .kpi-val { font-size: 22px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
+  .kpi-meta { display: flex; flex-direction: column; gap: 2px; }
+  .kpi-label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+  .kpi-fine { font-size: 11px; color: var(--text-secondary); }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 8px; padding: 8px 20px 0; border-bottom: 1px solid var(--border-light); background: var(--bg); align-items: center; justify-content: space-between; }
+  .tab-list { display: flex; gap: 8px; }
+  .tab { padding: 8px 12px; font-size: 12px; color: var(--text-secondary); border-bottom: 2px solid transparent; display: inline-flex; align-items: center; gap: 6px; }
+  .tab-active { color: var(--text-primary); font-weight: 600; border-bottom-color: var(--accent); }
+
+  /* Filter rail row */
+  .filter-rail { display: flex; align-items: center; gap: 12px; padding: 10px 20px; background: var(--bg); border-bottom: 1px solid var(--border-light); }
+  .selected-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: var(--accent); color: var(--text-primary); border-radius: var(--radius-pill); font-size: 11px; font-weight: 600; }
+  .selected-chip-name { font-weight: 700; }
+  .selected-chip-x { background: oklch(0 0 0 / 0.15); color: white; width: 14px; height: 14px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; }
+
+  /* Overview panels grid */
+  .overview-panels { display: grid; grid-template-columns: 1.1fr 1.1fr 1fr; gap: 12px; padding: 16px 20px 20px; }
+
+  .panel { background: var(--surface); border-radius: var(--radius-card); box-shadow: var(--shadow); padding: 16px; display: flex; flex-direction: column; min-height: 600px; position: relative; }
+  .panel-head { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
+  .panel-num { background: var(--accent); color: var(--text-primary); width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; }
+  .panel-title { font-size: 14px; font-weight: 700; margin: 0; color: var(--text-primary); }
+  .panel-title strong { color: var(--accent-text); }
+  .panel-arrow { color: var(--text-secondary); font-weight: 400; font-size: 12px; }
+  .panel-sub { font-size: 11px; color: var(--text-secondary); margin: 2px 0 0; line-height: 1.4; }
+  .panel-cta { margin-left: auto; }
+
+  /* Avatars */
+  .av { width: 28px; height: 28px; border-radius: 50%; background: var(--avatar-bg); color: var(--avatar-text); display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; letter-spacing: 0.02em; flex-shrink: 0; }
+  .av-sm { width: 22px; height: 22px; font-size: 9px; }
+  .av-md { width: 32px; height: 32px; font-size: 11px; }
+  .av-mint { background: var(--poc-mint); color: var(--poc-mint-text); }
+
+  /* ---------- Panel 1 — ribbon ---------- */
+  .ribbon-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; flex: 1; }
+  .ribbon-col-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); margin-bottom: 10px; font-weight: 600; }
+  .mgr-card { background: var(--surface); border: 1px solid var(--border-light); border-left: 3px solid var(--mgr-dan); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+  .mgr-card.tyler { border-left-color: var(--mgr-tyler); }
+  .mgr-card.chris { border-left-color: var(--mgr-chris); }
+  .mgr-card.laura { border-left-color: var(--mgr-laura); }
+  .mgr-card.active { background: oklch(0.97 0.025 230); box-shadow: 0 0 0 1px var(--accent-muted); }
+  .mgr-head { display: flex; align-items: center; gap: 8px; }
+  .mgr-name { font-size: 13px; font-weight: 600; }
+  .mgr-count { font-size: 10px; color: var(--text-secondary); }
+  .mgr-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .init-chip { width: 28px; height: 22px; background: var(--surface-hover); border: 1px solid var(--border-light); border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: var(--text-primary); }
+  .init-chip.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-muted); }
+  .init-chip.dim { opacity: 0.45; }
+  .init-chip.poc-init { background: oklch(0.97 0.018 160); border-color: var(--poc-mint); color: var(--poc-mint-text); }
+  .init-more { font-size: 10px; color: var(--text-secondary); padding: 0 6px; }
+
+  /* Sales side groups */
+  .ribbon-group { background: var(--surface); border: 1px solid var(--border-light); border-radius: 8px; margin-bottom: 8px; }
+  .ribbon-group-head { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border-left: 3px solid var(--accent-pressed); border-radius: 8px 8px 0 0; }
+  .ribbon-group-head.purple { border-left-color: var(--mgr-dan); }
+  .ribbon-group-head.orange { border-left-color: var(--mgr-tyler); }
+  .ribbon-group-head .rg-name { font-size: 12px; font-weight: 600; }
+  .ribbon-group-head .rg-sub { font-size: 9px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; }
+  .ribbon-group-head .rg-count { margin-left: auto; font-size: 10px; color: var(--text-secondary); background: var(--surface-hover); padding: 2px 7px; border-radius: 999px; }
+  .ribbon-group-body { padding: 6px 10px 8px; display: flex; flex-direction: column; gap: 4px; }
+  .ribbon-node {
+    display: flex; align-items: center; gap: 6px; padding: 4px 8px; background: var(--surface); border: 1px solid var(--border-light); border-radius: var(--radius-pill); font-size: 11px; position: relative;
+  }
+  .ribbon-node .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .ribbon-node.upsell { border-color: var(--role-upsell-border); background: var(--role-upsell-fill); color: var(--role-upsell-text); }
+  .ribbon-node.upsell .dot { background: var(--role-upsell-dot); }
+  .ribbon-node.newlogo { border-color: var(--role-newlogo-border); background: var(--role-newlogo-fill); color: var(--role-newlogo-text); }
+  .ribbon-node.newlogo .dot { background: var(--role-newlogo-dot); }
+  .ribbon-node.corpnl { border-color: var(--role-corpnl-border); background: var(--role-corpnl-fill); color: var(--role-corpnl-text); }
+  .ribbon-node.corpnl .dot { background: var(--role-corpnl-dot); }
+  .ribbon-node.eco { border-color: var(--role-eco-border); background: var(--role-eco-fill); color: var(--role-eco-text); }
+  .ribbon-node.eco .dot { background: var(--role-eco-dot); }
+  .ribbon-node.isv { border-color: var(--role-isv-border); background: var(--role-isv-fill); color: var(--role-isv-text); }
+  .ribbon-node.isv .dot { background: var(--role-isv-dot); }
+  .ribbon-node.active { box-shadow: var(--shadow-selected); }
+
+  /* ---------- Shape A — POC overlays ---------- */
+  /* Diamond glyph that sits on AE chips / nodes when there's POC participation */
+  .poc-mark {
+    position: absolute;
+    top: -4px; right: -4px;
+    width: 12px; height: 12px;
+    transform: rotate(45deg);
+    border: 1.5px solid var(--poc-mint-mark);
+    background: var(--surface);
+    border-radius: 2px;
+    box-shadow: 0 1px 2px oklch(0 0 0 / 0.08);
+  }
+  .poc-mark-lg { width: 14px; height: 14px; border-width: 2px; top: -5px; right: -5px; }
+  .poc-mark-sm { width: 10px; height: 10px; }
+  /* Inside-cell variant for AE chips in matrix grid (positioned within chip top-right) */
+  .poc-mark-cell { top: -3px; right: -3px; width: 10px; height: 10px; border-width: 1.5px; }
+
+  /* The partner strip for Panel 2 */
+  .poc-strip {
+    margin-top: 14px;
+    background: var(--poc-mint-soft);
+    border: 1px solid oklch(0.92 0.025 160);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .poc-strip-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .poc-strip-title {
+    font-size: 11px; font-weight: 700;
+    color: var(--poc-mint-text);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .poc-strip-title::before {
+    content: "";
+    display: inline-block; width: 9px; height: 9px;
+    transform: rotate(45deg);
+    border: 1.5px solid var(--poc-mint-mark);
+    border-radius: 1px;
+  }
+  .poc-strip-window { font-size: 10px; color: var(--text-secondary); font-weight: 500; }
+  .poc-pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .poc-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 5px 10px 5px 5px;
+    background: var(--surface);
+    border: 1px solid var(--poc-mint);
+    border-radius: var(--radius-pill);
+    font-size: 12px;
+    color: var(--text-primary);
+    transition: box-shadow .15s;
+  }
+  .poc-pill:hover { box-shadow: 0 2px 6px oklch(0 0 0 / 0.08); cursor: pointer; }
+  .poc-pill .av { width: 22px; height: 22px; font-size: 9px; }
+  .poc-pill-name { font-weight: 600; }
+  .poc-pill-count {
+    background: var(--surface-hover);
+    color: var(--text-secondary);
+    border-radius: 999px;
+    padding: 1px 7px;
+    font-size: 10px; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .poc-pill.active { box-shadow: var(--shadow-selected); }
+  .poc-pill.active .poc-pill-count { background: var(--accent-muted); color: var(--accent-text); }
+  .poc-pill-more { font-size: 11px; color: var(--text-secondary); padding: 0 6px; }
+  .poc-strip-empty { font-size: 12px; color: var(--text-secondary); font-style: italic; }
+
+  /* Panel 3 — bench (same shape as strip but a different visual home) */
+  .poc-bench {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: var(--poc-mint-soft);
+    border: 1px solid oklch(0.92 0.025 160);
+    border-radius: 10px;
+  }
+  .poc-bench-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    margin-bottom: 8px;
+  }
+  .poc-bench-title { font-size: 10px; font-weight: 700; color: var(--poc-mint-text); text-transform: uppercase; letter-spacing: 0.06em; display: flex; align-items: center; gap: 6px; }
+  .poc-bench-title::before { content: ""; display: inline-block; width: 8px; height: 8px; transform: rotate(45deg); border: 1.5px solid var(--poc-mint-mark); border-radius: 1px; }
+  .poc-bench-window { font-size: 10px; color: var(--text-secondary); }
+  .poc-bench-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+  .poc-bench-pills .poc-pill { padding: 4px 9px 4px 4px; font-size: 11px; }
+  .poc-bench-pills .av { width: 20px; height: 20px; font-size: 8px; }
+
+  /* Matrix-row chain (Panel 2) */
+  .se-chain { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+  .se-chain-pill { display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px 4px 4px; background: var(--surface); border: 1px solid var(--border-light); border-radius: var(--radius-pill); font-size: 12px; }
+  .se-chain-pill.active { background: oklch(0.97 0.025 230); border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-muted); }
+  .se-chain-name { font-weight: 600; }
+  .se-chain-sub { font-size: 9px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; }
+  .se-chain-arrow { color: var(--text-secondary); font-size: 12px; }
+
+  /* Matrix grid — AEs covered across RVPs */
+  .grid-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); margin-bottom: 8px; font-weight: 600; }
+  .matrix-grid { display: grid; grid-template-columns: repeat(var(--cols, 3), 1fr); gap: 10px; }
+  .matrix-col { background: oklch(0.985 0.005 240); border: 1px solid var(--border-light); border-radius: 8px; padding: 8px; }
+  .matrix-col-head { font-size: 11px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--border-light); }
+  .matrix-col-cell { display: flex; flex-direction: column; gap: 5px; }
+  .ae-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 8px; border-radius: var(--radius-pill);
+    border: 1px solid var(--border-light);
+    background: var(--surface);
+    font-size: 11px;
+    position: relative;
+  }
+  .ae-chip .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .ae-chip.upsell { background: var(--role-upsell-fill); border-color: var(--role-upsell-border); color: var(--role-upsell-text); }
+  .ae-chip.upsell .dot { background: var(--role-upsell-dot); }
+  .ae-chip.newlogo { background: var(--role-newlogo-fill); border-color: var(--role-newlogo-border); color: var(--role-newlogo-text); }
+  .ae-chip.newlogo .dot { background: var(--role-newlogo-dot); }
+  .ae-chip.corpnl { background: var(--role-corpnl-fill); border-color: var(--role-corpnl-border); color: var(--role-corpnl-text); }
+  .ae-chip.corpnl .dot { background: var(--role-corpnl-dot); }
+  .ae-chip.eco { background: var(--role-eco-fill); border-color: var(--role-eco-border); color: var(--role-eco-text); }
+  .ae-chip.eco .dot { background: var(--role-eco-dot); }
+  .ae-chip.isv { background: var(--role-isv-fill); border-color: var(--role-isv-border); color: var(--role-isv-text); }
+  .ae-chip.isv .dot { background: var(--role-isv-dot); }
+  .ae-chip.extra { background: var(--role-extra-fill); border-color: var(--role-extra-border); color: var(--role-extra-text); }
+  .ae-chip.extra .dot { background: var(--role-extra-dot); }
+
+  /* Load gauge */
+  .load-anchor { margin-top: auto; padding-top: 12px; }
+  .load-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .load-label { font-size: 11px; color: var(--text-secondary); }
+  .load-pct { font-size: 13px; font-weight: 700; margin-left: auto; }
+  .load-pct.good { color: oklch(0.52 0.06 155); }
+  .load-pct.warn { color: oklch(0.58 0.11 60); }
+  .load-pct.bad { color: oklch(0.59 0.16 20); }
+  .load-badge { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .load-badge.good { background: oklch(0.943 0.025 155); color: oklch(0.520 0.060 155); }
+  .load-meter { position: relative; height: 6px; background: var(--surface-hover); border-radius: 999px; overflow: hidden; }
+  .load-fill { height: 100%; background: linear-gradient(to right, oklch(0.86 0.05 155), oklch(0.78 0.13 60), oklch(0.62 0.18 20)); }
+  .load-target { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--text-primary); }
+  .load-marker { position: absolute; top: -3px; width: 10px; height: 12px; border-radius: 3px; background: oklch(0.52 0.06 155); transform: translateX(-5px); border: 1px solid white; }
+
+  /* Panel 3 — dual chain */
+  .ae-dual { flex: 1; padding: 8px 0 0; position: relative; }
+  .ae-rails { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .ae-rail-label { font-size: 11px; font-weight: 700; margin-bottom: 8px; }
+  .ae-rail-label.tech { color: oklch(0.52 0.06 155); }
+  .ae-rail-label.comm { color: var(--accent-pressed); }
+  .ae-rail-sub { font-size: 9px; color: var(--text-secondary); font-weight: 500; }
+  .ae-rail-cards { display: flex; flex-direction: column; gap: 6px; }
+  .ae-pill {
+    display: flex; gap: 8px; align-items: center;
+    padding: 8px 12px; background: var(--surface); border: 1px solid var(--border-light); border-radius: 999px;
+    box-shadow: var(--shadow);
+  }
+  .ae-pill-text { display: flex; flex-direction: column; gap: 1px; }
+  .ae-pill-name { font-size: 12px; font-weight: 600; }
+  .ae-pill-name-lg { font-size: 14px; }
+  .ae-pill-role { font-size: 9px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; }
+  .ae-anchor { display: flex; justify-content: center; margin-top: 18px; }
+  .ae-pill-anchor { background: oklch(0.97 0.025 230); border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-muted), var(--shadow); padding: 12px 18px; }
+  .ae-svg { position: absolute; inset: 0; pointer-events: none; }
+
+  /* Panel 3 fan-out (multi-AE adaptive layout) */
+  .ae-fanout { flex: 1; display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+  .ae-fanout-group {
+    background: oklch(0.985 0.005 240);
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .ae-fanout-head {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--border-light);
+  }
+  .ae-fanout-head .rvp-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 9px 3px 3px;
+    background: var(--surface);
+    border: 1px solid var(--accent-pressed);
+    border-radius: 999px;
+    font-size: 11px; font-weight: 600;
+    color: var(--accent-text);
+  }
+  .ae-fanout-head .rvp-pill .av { width: 18px; height: 18px; font-size: 8px; background: var(--accent-pressed); }
+  .ae-fanout-head .avp-pill {
+    font-size: 10px; color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .ae-fanout-head .avp-pill::before {
+    content: "→"; color: var(--text-muted); margin-right: 2px;
+  }
+  .ae-fanout-cards {
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .ae-fanout-card {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px 5px 5px;
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+    border-radius: 999px;
+    font-size: 11px;
+    box-shadow: var(--shadow);
+    position: relative;
+  }
+  .ae-fanout-card .av { width: 22px; height: 22px; font-size: 9px; }
+  .ae-fanout-card .ae-pill-text { display: flex; flex-direction: column; gap: 0; line-height: 1.3; }
+  .ae-fanout-card .ae-pill-name { font-size: 12px; font-weight: 600; }
+  .ae-fanout-card .ae-pill-role { font-size: 9px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; }
+  .ae-fanout-card.poc-active::after {
+    content: "";
+    position: absolute; top: -4px; right: -4px;
+    width: 12px; height: 12px;
+    transform: rotate(45deg);
+    border: 1.5px solid var(--poc-mint-mark);
+    background: var(--surface);
+    border-radius: 2px;
+    box-shadow: 0 1px 2px oklch(0 0 0 / 0.08);
+  }
+  /* Active selection inside fanout */
+  .ae-fanout-card.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-muted), var(--shadow); }
+
+  /* Tech-chain → fanout connector (decorative) */
+  .ae-fanout-bridge {
+    height: 14px;
+    position: relative;
+    margin: -4px 0 -2px 0;
+  }
+  .ae-fanout-bridge::before {
+    content: "";
+    position: absolute;
+    left: 50%; top: 0; bottom: 0;
+    width: 1px;
+    background: linear-gradient(to bottom, oklch(0.52 0.06 155 / 0.5), transparent);
+  }
+  .ae-fanout-bridge::after {
+    content: "";
+    position: absolute;
+    left: 50%; top: 0;
+    width: 6px; height: 6px;
+    transform: translateX(-50%) rotate(45deg);
+    background: oklch(0.52 0.06 155);
+    border-radius: 1px;
+  }
+
+  /* Compact summary head when fanout is in scope */
+  .ae-summary {
+    font-size: 11px; color: var(--text-secondary);
+    margin-bottom: 8px; display: flex; gap: 12px; align-items: center;
+  }
+  .ae-summary-stat {
+    display: inline-flex; gap: 4px; align-items: center;
+  }
+  .ae-summary-stat strong { color: var(--text-primary); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+  /* SA-centric Panel 2 — engagement grid */
+  .saengage { flex: 1; }
+  .saengage-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--cols, 3), 1fr);
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .saengage-col { background: oklch(0.985 0.005 240); border: 1px solid var(--border-light); border-radius: 8px; padding: 8px; }
+  .saengage-col-head {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 11px; font-weight: 600;
+    margin-bottom: 6px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .saengage-col-deals { font-size: 9px; color: var(--text-secondary); background: var(--surface); padding: 1px 6px; border-radius: 999px; }
+  .saengage-cell { display: flex; flex-direction: column; gap: 5px; }
+  .saengage-ae {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 8px; border-radius: var(--radius-pill);
+    background: var(--surface); border: 1px solid var(--border-light);
+    font-size: 11px; position: relative;
+  }
+  .saengage-ae-count {
+    background: var(--poc-mint-soft); border: 1px solid var(--poc-mint);
+    color: var(--poc-mint-text);
+    font-size: 9px; font-weight: 700; font-variant-numeric: tabular-nums;
+    padding: 1px 5px; border-radius: 999px; margin-left: auto;
+  }
+  .saengage-meta {
+    display: flex; gap: 16px;
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: var(--surface-hover);
+    border-radius: 8px;
+    font-size: 11px;
+  }
+  .saengage-meta-item { display: flex; flex-direction: column; gap: 2px; }
+  .saengage-meta-label { font-size: 9px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; }
+  .saengage-meta-val { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  /* Discrepancies */
+  .disc-section { background: var(--surface); border-radius: var(--radius-card); padding: 16px; box-shadow: var(--shadow); margin-top: 12px; }
+  .disc-section-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .disc-section-icon { width: 24px; height: 24px; border-radius: 6px; background: var(--poc-mint-soft); border: 1px solid var(--poc-mint); display: inline-flex; align-items: center; justify-content: center; }
+  .disc-section-icon::before { content: ""; width: 10px; height: 10px; transform: rotate(45deg); border: 1.5px solid var(--poc-mint-mark); border-radius: 1px; }
+  .disc-section-title { font-size: 14px; font-weight: 700; }
+  .disc-section-sub { font-size: 11px; color: var(--text-secondary); margin-left: 8px; }
+  .disc-row-group { border-top: 1px solid var(--border-light); padding-top: 12px; margin-top: 12px; }
+  .disc-row-group:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
+  .disc-row-title { font-size: 12px; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .disc-row-count { font-size: 11px; color: var(--text-secondary); background: var(--surface-hover); padding: 1px 8px; border-radius: 999px; font-weight: 600; }
+  .disc-row-list { display: flex; flex-direction: column; gap: 4px; }
+  .disc-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 12px;
+    background: var(--surface-hover);
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  .disc-row-name { font-weight: 600; }
+  .disc-row-meta { color: var(--text-secondary); margin-left: auto; font-size: 11px; }
+  .disc-row-pill {
+    background: var(--surface); border: 1px solid var(--border-light);
+    border-radius: 999px; padding: 1px 8px; font-size: 10px; font-variant-numeric: tabular-nums;
+  }
+  .disc-row-pill.warn { background: oklch(0.96 0.04 75); border-color: oklch(0.86 0.08 75); color: oklch(0.5 0.12 60); }
+
+  /* Annotation legend */
+  .legend {
+    margin: 16px 0;
+    padding: 14px 18px;
+    background: var(--surface);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 22px;
+    align-items: center;
+    font-size: 12px;
+  }
+  .legend-title { font-weight: 700; }
+  .legend-item { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); }
+  .legend-swatch-diamond { width: 12px; height: 12px; transform: rotate(45deg); border: 2px solid var(--poc-mint-mark); border-radius: 1px; }
+  .legend-swatch-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 2px; background: var(--surface); border: 1px solid var(--poc-mint); border-radius: 999px; font-size: 10px; }
+  .legend-swatch-pill .av { width: 16px; height: 16px; font-size: 7px; }
+  .legend-swatch-strip { width: 28px; height: 12px; background: var(--poc-mint-soft); border: 1px solid var(--poc-mint); border-radius: 4px; }
+  .legend-swatch-blue { width: 14px; height: 14px; background: var(--accent); border-radius: 50%; }
+  .legend-swatch-mark { color: oklch(0.32 0.13 340); font-weight: 700; }
+
+  /* TOC */
+  .toc {
+    background: var(--surface);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow);
+    padding: 16px 20px;
+    margin: 20px 0 32px;
+  }
+  .toc h3 { margin: 0 0 8px; font-size: 13px; }
+  .toc ol { margin: 0; padding-left: 20px; font-size: 13px; }
+  .toc li { margin-bottom: 4px; }
+  .toc a { color: var(--accent-text); text-decoration: none; font-weight: 600; }
+  .toc a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<div class="mock-doc">
+  <h1 class="mock-h1">Shape A — POC Architects as first-class citizens</h1>
+  <p class="mock-sub">High-fidelity mock built against the existing CSS token system. Magenta callouts mark <span class="legend-swatch-mark">Shape A additions</span> only — everything else is the current Overview.</p>
+
+  <div class="legend">
+    <div class="legend-title">Visual language</div>
+    <div class="legend-item"><span class="legend-swatch-blue"></span><strong>Domo Blue</strong> — selection / focus signal (unchanged, never used for SA)</div>
+    <div class="legend-item"><span class="legend-swatch-diamond"></span>SA participation glyph (per-(SE,AE) pair)</div>
+    <div class="legend-item"><span class="legend-swatch-pill"><span class="av av-mint">DC</span>Doug</span>SA partner pill (outlined; never filled)</div>
+    <div class="legend-item"><span class="legend-swatch-strip"></span>POC Architect strip / bench background</div>
+  </div>
+
+  <div class="toc">
+    <h3>States</h3>
+    <ol>
+      <li><a href="#state-1">State 1 — SE selected (Shana Brennan).</a> Default Overview reading; SA overlay visible across all three panels; Panel 3 = Shana's relationships fan-out.</li>
+      <li><a href="#state-2">State 2 — SA selected (Doug Carter).</a> Panel 2 = engagement grid by SE; Panel 3 = engagement fan-out by RVP. Two complementary slices of Doug's deal footprint.</li>
+      <li><a href="#state-3">State 3 — Panel 3 close-up.</a> Detail of the fan-out at higher zoom.</li>
+      <li><a href="#state-4">State 4 — Discrepancies new section.</a> Four new SA-relevant row groups.</li>
+      <li><a href="#state-5">State 5 — Panel 3 in full Overview (Ron Karas, 4 AEs).</a> Demonstrates the fan-out replacing today's "first AE only" view.</li>
+      <li><a href="#state-6">State 6 — Geometry consistency: N=1 vs N=4.</a> Same fan-out at different scope densities. Single AE selection on the left, multi-AE SE on the right.</li>
+    </ol>
+  </div>
+
+  <!-- =============================================
+       STATE 1 — SE SELECTED (DEFAULT OVERVIEW READING)
+       ============================================= -->
+  <section class="mock-section" id="state-1">
+    <div class="mock-state-label"><span class="mock-state-num">1</span>SE selected — Shana Brennan</div>
+    <h2 class="mock-h2">Default Overview reading with Shape A overlay across all three panels</h2>
+    <p class="mock-state-sub">Same selection state as your existing <code>redesign-default.png</code>. The three new affordances are: AE diamond glyph (Panel 1), POC partner strip + per-cell mark (Panel 2), and POC bench under the AE anchor (Panel 3).</p>
+
+    <div class="frame">
+      <div class="app-header">
+        <div>
+          <h2 class="app-title">Sales Org Visualizer</h2>
+          <p class="app-subtitle">SE / SA ↔ AE relationships</p>
+        </div>
+        <div class="app-header-actions">
+          <span class="pill-btn">🔍 Search ⌘K</span>
+        </div>
+      </div>
+
+      <div class="kpi-strip">
+        <div class="kpi kpi-good">
+          <div class="kpi-dot"></div>
+          <div style="display:flex; align-items:baseline; gap:10px;"><div class="kpi-val">100<span style="font-size:14px">%</span></div><div class="kpi-meta"><div class="kpi-label">AEs covered</div><div class="kpi-fine">72 of 72</div></div></div>
+        </div>
+        <div class="kpi kpi-warn">
+          <div class="kpi-dot"></div>
+          <div style="display:flex; align-items:baseline; gap:10px;"><div class="kpi-val">5</div><div class="kpi-meta"><div class="kpi-label">Floaters</div><div class="kpi-fine">no SE assigned</div></div></div>
+        </div>
+        <div class="kpi kpi-danger">
+          <div class="kpi-dot"></div>
+          <div style="display:flex; align-items:baseline; gap:10px;"><div class="kpi-val">9</div><div class="kpi-meta"><div class="kpi-label">Overloaded SEs</div><div class="kpi-fine">10 on target · 1 slack · median 100%</div></div></div>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab-list">
+          <span class="tab tab-active">⚏ Full org</span>
+          <span class="tab">⊕ Focus</span>
+          <span class="tab">⫛ Corp New Logo</span>
+          <span class="tab">⫛ Corp Upsell</span>
+          <span class="tab">⫛ Enterprise</span>
+          <span class="tab">⚠ Discrepancies</span>
+        </div>
+        <span class="tab" style="border:0;">⚙ Settings</span>
+      </div>
+
+      <div class="filter-rail">
+        <span class="pill-btn">⟨ Filters</span>
+        <span class="selected-chip"><span>SELECTED</span> <span class="selected-chip-name">Shana Brennan</span> <span class="selected-chip-x">×</span></span>
+        <span style="font-size:11px; color: var(--text-secondary);">Three live perspectives — full org, SE-centric, AE-centric — that stay linked as you click.</span>
+      </div>
+
+      <div class="overview-panels">
+
+        <!-- ========== Panel 1 ========== -->
+        <section class="panel" style="position: relative;">
+          <div class="panel-head">
+            <span class="panel-num">1</span>
+            <div>
+              <h3 class="panel-title">Full org</h3>
+              <p class="panel-sub">SE → AE coverage at a glance.</p>
+            </div>
+          </div>
+
+          <div class="ribbon-cols">
+            <div>
+              <div class="ribbon-col-title">SE org (by manager)</div>
+
+              <div class="mgr-card">
+                <div class="mgr-head">
+                  <span class="av av-md">DW</span>
+                  <span style="display:flex; flex-direction:column;">
+                    <span class="mgr-name">Dan Wentworth</span>
+                    <span class="mgr-count">6 SEs</span>
+                  </span>
+                </div>
+                <div class="mgr-chips">
+                  <span class="init-chip">KS</span>
+                  <span class="init-chip">MC</span>
+                  <span class="init-chip">BC</span>
+                  <span class="init-more">+3 more</span>
+                </div>
+              </div>
+
+              <div class="mgr-card tyler active">
+                <div class="mgr-head">
+                  <span class="av av-md" style="background: var(--mgr-tyler);">TC</span>
+                  <span style="display:flex; flex-direction:column;">
+                    <span class="mgr-name">Tyler Clark</span>
+                    <span class="mgr-count">8 SEs</span>
+                  </span>
+                </div>
+                <div class="mgr-chips">
+                  <span class="init-chip">RJ</span>
+                  <span class="init-chip active">SB</span>
+                  <span class="init-chip">MT</span>
+                  <span class="init-more">+5 more</span>
+                </div>
+              </div>
+
+              <div class="mgr-card chris">
+                <div class="mgr-head">
+                  <span class="av av-md" style="background: var(--mgr-chris);">CH</span>
+                  <span style="display:flex; flex-direction:column;">
+                    <span class="mgr-name">Chris Hunter</span>
+                    <span class="mgr-count">6 SEs</span>
+                  </span>
+                </div>
+                <div class="mgr-chips">
+                  <span class="init-chip">DG</span>
+                  <span class="init-chip">RK</span>
+                  <span class="init-chip">MN</span>
+                  <span class="init-more">+3 more</span>
+                </div>
+              </div>
+
+              <div class="mgr-card laura">
+                <div class="mgr-head">
+                  <span class="av av-md" style="background: var(--mgr-laura); color: var(--poc-mint-text);">LQ</span>
+                  <span style="display:flex; flex-direction:column;">
+                    <span class="mgr-name">Laura Qualey</span>
+                    <span class="mgr-count">4 POC Archs</span>
+                  </span>
+                </div>
+                <div class="mgr-chips">
+                  <span class="init-chip poc-init">DC</span>
+                  <span class="init-chip poc-init">SK</span>
+                  <span class="init-chip poc-init">JM</span>
+                  <span class="init-chip poc-init">+1</span>
+                </div>
+                <div style="position: relative;">
+                  <div class="annot annot-r" style="left: calc(100% + 14px); top: 8px;">Existing — SAs already live here. No change.</div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="ribbon-col-title">Sales (by AVP / RVP)</div>
+
+              <div class="ribbon-group">
+                <div class="ribbon-group-head">
+                  <span class="rg-name">Doug Hut</span>
+                  <span class="rg-sub">JOHN PASALANO</span>
+                  <span class="rg-count">6</span>
+                </div>
+                <div class="ribbon-group-body">
+                  <span class="ribbon-node corpnl">
+                    <span class="dot"></span>Greg Olson
+                    <span class="poc-mark poc-mark-sm" title="3 deals with POC partners"></span>
+                  </span>
+                  <span class="ribbon-node corpnl">
+                    <span class="dot"></span>Grant Anderson
+                  </span>
+                  <span class="ribbon-node corpnl">
+                    <span class="dot"></span>Chris Sink
+                    <span class="poc-mark poc-mark-sm" title="1 deal with POC partner"></span>
+                  </span>
+                </div>
+              </div>
+
+              <div class="ribbon-group">
+                <div class="ribbon-group-head purple">
+                  <span class="rg-name">Cameron Housley</span>
+                  <span class="rg-sub">ANDREW RICH</span>
+                  <span class="rg-count">6</span>
+                </div>
+                <div class="ribbon-group-body">
+                  <span class="ribbon-node newlogo">
+                    <span class="dot"></span>Bradey Sholly
+                  </span>
+                  <span class="ribbon-node newlogo">
+                    <span class="dot"></span>Adam Dunkley
+                    <span class="poc-mark poc-mark-lg" title="8 deals with POC partners"></span>
+                  </span>
+                  <span class="ribbon-node newlogo">
+                    <span class="dot"></span>Ryan Verno
+                  </span>
+                </div>
+              </div>
+
+              <div class="ribbon-group">
+                <div class="ribbon-group-head orange">
+                  <span class="rg-name">Dave Bauerle</span>
+                  <span class="rg-sub">KEITH WHITE</span>
+                  <span class="rg-count">7</span>
+                </div>
+                <div class="ribbon-group-body" style="position: relative;">
+                  <span class="ribbon-node upsell active">
+                    <span class="dot"></span>Colby Johnson
+                    <span class="poc-mark" title="5 deals with POC partners"></span>
+                  </span>
+                  <div class="annot annot-l" style="left: calc(100% + 16px); top: 8px;">NEW — diamond glyph signals SA participation.<br/>Size = deal-count bucket.</div>
+                  <span class="ribbon-node upsell">
+                    <span class="dot"></span>Patrick Rice
+                    <span class="poc-mark poc-mark-sm" title="2 deals"></span>
+                  </span>
+                  <span class="ribbon-node upsell">
+                    <span class="dot"></span>Eric Borland
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========== Panel 2 — SE-centric ========== -->
+        <section class="panel">
+          <div class="panel-head">
+            <span class="panel-num">2</span>
+            <div>
+              <h3 class="panel-title">SE-centric: <strong>Shana Brennan</strong> <span class="panel-arrow">→ matrix row</span></h3>
+              <p class="panel-sub">Manager chain → AEs by RVP → load.</p>
+            </div>
+          </div>
+
+          <div class="se-chain">
+            <span class="se-chain-pill">
+              <span class="av">CH</span>
+              <span><span class="se-chain-name">Cassidy Hilton</span><br><span class="se-chain-sub">SE Org Lead</span></span>
+            </span>
+            <span class="se-chain-arrow">→</span>
+            <span class="se-chain-pill">
+              <span class="av" style="background: var(--mgr-tyler);">TC</span>
+              <span><span class="se-chain-name">Tyler Clark</span><br><span class="se-chain-sub">SE Manager</span></span>
+            </span>
+            <span class="se-chain-arrow">→</span>
+            <span class="se-chain-pill active">
+              <span class="av">SB</span>
+              <span><span class="se-chain-name">Shana Brennan</span><br><span class="se-chain-sub">Solutions Engineer</span></span>
+            </span>
+          </div>
+
+          <div class="grid-label">AEs covered across RVPs</div>
+          <div class="matrix-grid" style="--cols: 3; position: relative;">
+            <div class="matrix-col">
+              <div class="matrix-col-head">Brock Kennick</div>
+              <div class="matrix-col-cell">
+                <span class="ae-chip upsell">
+                  <span class="dot"></span>Colby Johnson
+                  <span class="poc-mark poc-mark-cell" title="POC: Doug Carter (5)"></span>
+                </span>
+                <span class="ae-chip extra">
+                  <span class="dot"></span>Patrick Rice
+                  <span class="poc-mark poc-mark-cell" title="POC: Sara K (2)"></span>
+                </span>
+              </div>
+            </div>
+            <div class="matrix-col">
+              <div class="matrix-col-head">Sione Havili</div>
+              <div class="matrix-col-cell">
+                <span class="ae-chip upsell">
+                  <span class="dot"></span>Scott Bartholomew
+                </span>
+              </div>
+            </div>
+            <div class="matrix-col">
+              <div class="matrix-col-head">Eric Borland</div>
+              <div class="matrix-col-cell">
+                <span class="ae-chip upsell">
+                  <span class="dot"></span>Fui Kinikini
+                  <span class="poc-mark poc-mark-cell" title="POC: Doug Carter (1)"></span>
+                </span>
+              </div>
+            </div>
+            <div class="annot annot-t" style="top: -6px; right: 10px;">NEW — chip-corner diamond marks (SE × AE) deal-pair has POC partner.</div>
+          </div>
+
+          <div class="poc-strip" style="position: relative;">
+            <div class="poc-strip-head">
+              <div class="poc-strip-title">POC Architect partners</div>
+              <div class="poc-strip-window">last 90d · current FY-to-date</div>
+            </div>
+            <div class="poc-pills">
+              <button class="poc-pill" type="button">
+                <span class="av av-mint">DC</span>
+                <span class="poc-pill-name">Doug Carter</span>
+                <span class="poc-pill-count">12</span>
+              </button>
+              <button class="poc-pill" type="button">
+                <span class="av av-mint">SK</span>
+                <span class="poc-pill-name">Sara Krishnamurthy</span>
+                <span class="poc-pill-count">4</span>
+              </button>
+              <button class="poc-pill" type="button">
+                <span class="av av-mint">JM</span>
+                <span class="poc-pill-name">Jen Morales</span>
+                <span class="poc-pill-count">2</span>
+              </button>
+              <span class="poc-pill-more">+1 more</span>
+            </div>
+            <div class="annot annot-l" style="right: calc(100% + 14px); top: 36px;">NEW — replaces<br/>the &lt;PocPartnersLine&gt;<br/>footer text.</div>
+          </div>
+
+          <div class="load-anchor">
+            <div class="load-head">
+              <span class="load-label">Shana Brennan load</span>
+              <span class="load-pct bad">133%</span>
+              <span class="load-badge good" style="background:oklch(0.96 0.04 20); color:oklch(0.5 0.13 20);">OVERLOADED</span>
+            </div>
+            <div class="load-meter">
+              <div class="load-fill" style="width: 89%;"></div>
+              <div class="load-target" style="left: 67%;"></div>
+              <div class="load-marker" style="left: 89%;"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========== Panel 3 — fan-out for the SE in scope ========== -->
+        <section class="panel" style="position: relative;">
+          <div class="panel-head">
+            <span class="panel-num">3</span>
+            <div>
+              <h3 class="panel-title">Relationships: <strong>Shana Brennan</strong> <span class="panel-arrow">→ 4 AEs across 3 RVPs</span></h3>
+              <p class="panel-sub">All AEs Shana covers, with their commercial reporting paths.</p>
+            </div>
+          </div>
+
+          <div class="se-chain">
+            <span class="se-chain-pill"><span class="av">CH</span><span><span class="se-chain-name">Cassidy Hilton</span><br><span class="se-chain-sub">SE Org Lead</span></span></span>
+            <span class="se-chain-arrow">→</span>
+            <span class="se-chain-pill"><span class="av" style="background: var(--mgr-tyler);">TC</span><span><span class="se-chain-name">Tyler Clark</span><br><span class="se-chain-sub">SE Manager</span></span></span>
+            <span class="se-chain-arrow">→</span>
+            <span class="se-chain-pill active"><span class="av">SB</span><span><span class="se-chain-name">Shana Brennan</span><br><span class="se-chain-sub">Solutions Engineer</span></span></span>
+          </div>
+
+          <div class="ae-fanout-bridge"></div>
+
+          <div class="ae-summary">
+            <div class="ae-summary-stat"><strong>4</strong> AEs</div>
+            <div class="ae-summary-stat"><strong>3</strong> RVPs</div>
+            <div class="ae-summary-stat"><strong>1</strong> AVP</div>
+          </div>
+
+          <div class="ae-fanout">
+            <div class="ae-fanout-group">
+              <div class="ae-fanout-head">
+                <span class="rvp-pill"><span class="av av-sm">BK</span>Brock Kennick · RVP</span>
+                <span class="avp-pill">Keith White · AVP</span>
+              </div>
+              <div class="ae-fanout-cards">
+                <div class="ae-fanout-card poc-active">
+                  <span class="av av-sm" style="background: var(--role-upsell-dot); color: var(--role-upsell-text);">CJ</span>
+                  <span class="ae-pill-text"><span class="ae-pill-name">Colby Johnson</span><span class="ae-pill-role">UPSELL</span></span>
+                </div>
+                <div class="ae-fanout-card poc-active">
+                  <span class="av av-sm" style="background: var(--role-extra-dot); color: var(--role-extra-text);">PR</span>
+                  <span class="ae-pill-text"><span class="ae-pill-name">Patrick Rice</span><span class="ae-pill-role">EXTRA AE</span></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="ae-fanout-group">
+              <div class="ae-fanout-head">
+                <span class="rvp-pill"><span class="av av-sm">SH</span>Sione Havili · RVP</span>
+                <span class="avp-pill">Keith White · AVP</span>
+              </div>
+              <div class="ae-fanout-cards">
+                <div class="ae-fanout-card">
+                  <span class="av av-sm" style="background: var(--role-upsell-dot); color: var(--role-upsell-text);">SB</span>
+                  <span class="ae-pill-text"><span class="ae-pill-name">Scott Bartholomew</span><span class="ae-pill-role">UPSELL</span></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="ae-fanout-group">
+              <div class="ae-fanout-head">
+                <span class="rvp-pill"><span class="av av-sm">EB</span>Eric Borland · RVP</span>
+                <span class="avp-pill">Keith White · AVP</span>
+              </div>
+              <div class="ae-fanout-cards">
+                <div class="ae-fanout-card poc-active">
+                  <span class="av av-sm" style="background: var(--role-upsell-dot); color: var(--role-upsell-text);">FK</span>
+                  <span class="ae-pill-text"><span class="ae-pill-name">Fui Kinikini</span><span class="ae-pill-role">UPSELL</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="poc-bench" style="margin-top: 14px; position: relative;">
+            <div class="poc-bench-head">
+              <div class="poc-bench-title">POC Architect partners <span style="font-weight:500; text-transform: none; letter-spacing: 0;">(across 4 AEs)</span></div>
+              <div class="poc-bench-window">last 90d</div>
+            </div>
+            <div class="poc-bench-pills">
+              <button class="poc-pill" type="button">
+                <span class="av av-mint">DC</span>
+                <span class="poc-pill-name">Doug Carter</span>
+                <span class="poc-pill-count">12</span>
+              </button>
+              <button class="poc-pill" type="button">
+                <span class="av av-mint">SK</span>
+                <span class="poc-pill-name">Sara K</span>
+                <span class="poc-pill-count">4</span>
+              </button>
+              <span class="poc-pill-more">+1 more</span>
+            </div>
+            <div class="annot annot-l" style="right: calc(100% + 14px); top: 22px;">Aggregated bench<br/>across all 4 AEs.</div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================
+       STATE 2 — SA SELECTED (DOUG CARTER)
+       ============================================= -->
+  <section class="mock-section" id="state-2">
+    <div class="mock-state-label"><span class="mock-state-num">2</span>SA selected — Doug Carter</div>
+    <h2 class="mock-h2">SA-centric reframe — Panel 2 becomes a new geometry</h2>
+    <p class="mock-state-sub">Selecting an SA from Panel 1 (or search) reframes Panel 2 to an honest "engagement grid": columns = covering SEs, cells = AEs Doug partnered with under that SE, badges = deal counts. Panel 3 lands on Doug's top AE and highlights him in the bench.</p>
+
+    <div class="frame">
+      <div class="app-header">
+        <div>
+          <h2 class="app-title">Sales Org Visualizer</h2>
+          <p class="app-subtitle">SE / SA ↔ AE relationships</p>
+        </div>
+        <div class="app-header-actions"><span class="pill-btn">🔍 Search ⌘K</span></div>
+      </div>
+
+      <div class="filter-rail">
+        <span class="pill-btn">⟨ Filters</span>
+        <span class="selected-chip" style="background: var(--poc-mint); color: var(--poc-mint-text);"><span>SELECTED</span> <span class="selected-chip-name">Doug Carter</span> <span class="selected-chip-x">×</span></span>
+        <span style="font-size:11px; color: var(--text-secondary);">SA selected — panels show Doug's engagement footprint.</span>
+      </div>
+
+      <div class="overview-panels">
+
+        <!-- Panel 1 — Doug Carter's chip is highlighted in Laura's group; AE diamonds remain visible everywhere -->
+        <section class="panel">
+          <div class="panel-head">
+            <span class="panel-num">1</span>
+            <div>
+              <h3 class="panel-title">Full org</h3>
+              <p class="panel-sub">SE → AE coverage at a glance.</p>
+            </div>
+          </div>
+
+          <div class="ribbon-cols">
+            <div>
+              <div class="ribbon-col-title">SE org (by manager)</div>
+              <div class="mgr-card">
+                <div class="mgr-head"><span class="av av-md">DW</span><span><span class="mgr-name">Dan Wentworth</span><span class="mgr-count" style="display:block;">6 SEs</span></span></div>
+                <div class="mgr-chips"><span class="init-chip dim">KS</span><span class="init-chip dim">MC</span><span class="init-chip dim">BC</span><span class="init-more">+3</span></div>
+              </div>
+              <div class="mgr-card tyler">
+                <div class="mgr-head"><span class="av av-md" style="background: var(--mgr-tyler);">TC</span><span><span class="mgr-name">Tyler Clark</span><span class="mgr-count" style="display:block;">8 SEs</span></span></div>
+                <div class="mgr-chips"><span class="init-chip">RJ</span><span class="init-chip">SB</span><span class="init-chip dim">MT</span><span class="init-more">+5</span></div>
+              </div>
+              <div class="mgr-card chris">
+                <div class="mgr-head"><span class="av av-md" style="background: var(--mgr-chris);">CH</span><span><span class="mgr-name">Chris Hunter</span><span class="mgr-count" style="display:block;">6 SEs</span></span></div>
+                <div class="mgr-chips"><span class="init-chip">DG</span><span class="init-chip dim">RK</span><span class="init-chip">MN</span><span class="init-more">+3</span></div>
+              </div>
+              <div class="mgr-card laura active">
+                <div class="mgr-head"><span class="av av-md" style="background: var(--mgr-laura); color: var(--poc-mint-text);">LQ</span><span><span class="mgr-name">Laura Qualey</span><span class="mgr-count" style="display:block;">4 POC Archs</span></span></div>
+                <div class="mgr-chips" style="position: relative;">
+                  <span class="init-chip poc-init active">DC</span>
+                  <span class="init-chip poc-init">SK</span>
+                  <span class="init-chip poc-init">JM</span>
+                  <span class="init-chip poc-init">+1</span>
+                  <div class="annot annot-l" style="left: calc(100% + 14px); top: -4px;">Doug Carter selected.</div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="ribbon-col-title">Sales (by AVP / RVP)</div>
+              <div class="ribbon-group">
+                <div class="ribbon-group-head"><span class="rg-name">Doug Hut</span><span class="rg-sub">JOHN PASALANO</span><span class="rg-count">6</span></div>
+                <div class="ribbon-group-body">
+                  <span class="ribbon-node corpnl"><span class="dot"></span>Greg Olson<span class="poc-mark poc-mark-sm"></span></span>
+                  <span class="ribbon-node corpnl"><span class="dot"></span>Grant Anderson</span>
+                </div>
+              </div>
+              <div class="ribbon-group">
+                <div class="ribbon-group-head purple"><span class="rg-name">Cameron Housley</span><span class="rg-sub">ANDREW RICH</span><span class="rg-count">6</span></div>
+                <div class="ribbon-group-body">
+                  <span class="ribbon-node newlogo"><span class="dot"></span>Adam Dunkley<span class="poc-mark"></span></span>
+                  <span class="ribbon-node newlogo"><span class="dot"></span>Ryan Verno</span>
+                </div>
+              </div>
+              <div class="ribbon-group">
+                <div class="ribbon-group-head orange"><span class="rg-name">Dave Bauerle</span><span class="rg-sub">KEITH WHITE</span><span class="rg-count">7</span></div>
+                <div class="ribbon-group-body">
+                  <span class="ribbon-node upsell active"><span class="dot"></span>Colby Johnson<span class="poc-mark"></span></span>
+                  <span class="ribbon-node upsell"><span class="dot"></span>Patrick Rice<span class="poc-mark poc-mark-sm"></span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Panel 2 — SA-centric engagement grid -->
+        <section class="panel" style="position: relative;">
+          <div class="panel-head">
+            <span class="panel-num">2</span>
+            <div>
+              <h3 class="panel-title">POC Architect: <strong>Doug Carter</strong> <span class="panel-arrow">→ engagement grid</span></h3>
+              <p class="panel-sub">Reports to Laura Qualey · cells show AEs Doug partnered with, badged by deal count.</p>
+            </div>
+          </div>
+
+          <div class="se-chain">
+            <span class="se-chain-pill"><span class="av">CH</span><span><span class="se-chain-name">Cassidy Hilton</span><br><span class="se-chain-sub">SE Org Lead</span></span></span>
+            <span class="se-chain-arrow">→</span>
+            <span class="se-chain-pill"><span class="av" style="background: var(--mgr-laura); color: var(--poc-mint-text);">LQ</span><span><span class="se-chain-name">Laura Qualey</span><br><span class="se-chain-sub">SA Manager</span></span></span>
+            <span class="se-chain-arrow">→</span>
+            <span class="se-chain-pill active" style="border-color: var(--poc-mint); box-shadow: 0 0 0 2px oklch(0.92 0.025 160);">
+              <span class="av av-mint">DC</span>
+              <span><span class="se-chain-name">Doug Carter</span><br><span class="se-chain-sub">POC Architect</span></span>
+            </span>
+          </div>
+
+          <div class="grid-label">Engagements grouped by covering SE</div>
+          <div class="saengage-grid" style="--cols: 4;">
+            <div class="saengage-col">
+              <div class="saengage-col-head">
+                <span>Shana Brennan</span>
+                <span class="saengage-col-deals">8 deals</span>
+              </div>
+              <div class="saengage-cell">
+                <span class="saengage-ae"><span class="av av-sm">CJ</span>Colby Johnson<span class="saengage-ae-count">5</span></span>
+                <span class="saengage-ae"><span class="av av-sm">FK</span>Fui Kinikini<span class="saengage-ae-count">2</span></span>
+                <span class="saengage-ae"><span class="av av-sm">PR</span>Patrick Rice<span class="saengage-ae-count">1</span></span>
+              </div>
+            </div>
+            <div class="saengage-col">
+              <div class="saengage-col-head">
+                <span>Megha Kumar</span>
+                <span class="saengage-col-deals">5 deals</span>
+              </div>
+              <div class="saengage-cell">
+                <span class="saengage-ae"><span class="av av-sm">GA</span>Grant Anderson<span class="saengage-ae-count">3</span></span>
+                <span class="saengage-ae"><span class="av av-sm">CS</span>Chris Sink<span class="saengage-ae-count">2</span></span>
+              </div>
+            </div>
+            <div class="saengage-col">
+              <div class="saengage-col-head">
+                <span>Adam Dunkley</span>
+                <span class="saengage-col-deals">4 deals</span>
+              </div>
+              <div class="saengage-cell">
+                <span class="saengage-ae"><span class="av av-sm">RV</span>Ryan Verno<span class="saengage-ae-count">3</span></span>
+                <span class="saengage-ae"><span class="av av-sm">BS</span>Bradey Sholly<span class="saengage-ae-count">1</span></span>
+              </div>
+            </div>
+            <div class="saengage-col">
+              <div class="saengage-col-head">
+                <span>Mike Newcomb</span>
+                <span class="saengage-col-deals">2 deals</span>
+              </div>
+              <div class="saengage-cell">
+                <span class="saengage-ae"><span class="av av-sm">GO</span>Greg Olson<span class="saengage-ae-count">2</span></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="annot annot-t" style="top: 220px; right: 30px;">NEW — engagement grid replaces<br/>SE-row geometry for SAs.<br/>Columns = covering SEs.</div>
+
+          <div class="saengage-meta">
+            <div class="saengage-meta-item">
+              <div class="saengage-meta-label">Total engagements</div>
+              <div class="saengage-meta-val">19 deals</div>
+            </div>
+            <div class="saengage-meta-item">
+              <div class="saengage-meta-label">SEs partnered with</div>
+              <div class="saengage-meta-val">4</div>
+            </div>
+            <div class="saengage-meta-item">
+              <div class="saengage-meta-label">AEs partnered with</div>
+              <div class="saengage-meta-val">8</div>
+            </div>
+            <div class="saengage-meta-item">
+              <div class="saengage-meta-label">Pipeline touched</div>
+              <div class="saengage-meta-val">$2.4M</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Panel 3 — Doug's engagement fan-out by RVP -->
+        <section class="panel" style="position: relative;">
+          <div class="panel-head">
+            <span class="panel-num">3</span>
+            <div>
+              <h3 class="panel-title">Engagements: <strong>Doug Carter</strong> <span class="panel-arrow">→ 8 AEs across 4 RVPs</span></h3>
+              <p class="panel-sub">All AEs Doug has partnered with (last 90d), grouped by their RVP.</p>
+            </div>
+          </div>
+
+          <div class="se-chain">
+            <span class="se-chain-pill"><span class="av">CH</span><span><span class="se-chain-name">Cassidy Hilton</span><br><span class="se-chain-sub">SE Org Lead</span></span></span>
+            <span class="se-chain-arrow">→</span>
+            <span class="se-chain-pill"><span class="av" style="background: var(--mgr-laura); color: var(--poc-mint-text);">LQ</span><span><span class="se-chain-name">Laura Qualey</span><br><span class="se-chain-sub">SA Manager</span></span></span>
+            <span class="se-chain-arrow">→</span>
+            <span class="se-chain-pill active" style="border-color: var(--poc-mint); box-shadow: 0 0 0 2px oklch(0.92 0.025 160);">
+              <span class="av av-mint">DC</span>
+              <span><span class="se-chain-name">Doug Carter</span><br><span class="se-chain-sub">POC Architect</span></span>
+            </span>
+          </div>
+
+          <div class="ae-fanout-bridge" style="--bridge-color: var(--poc-mint-mark);"></div>
+
+          <div class="ae-summary">
+            <div class="ae-summary-stat"><strong>8</strong> AEs</div>
+            <div class="ae-summary-stat"><strong>4</strong> RVPs</div>
+            <div class="ae-summary-stat"><strong>4</strong> covering SEs</div>
+            <div class="ae-summary-stat"><strong>19</strong> deals</div>
+            <div class="ae-summary-stat"><strong>$2.4M</strong> pipeline</div>
+          </div>
+
+          <div class="ae-fanout">
+            <div class="ae-fanout-group">
+              <div class="ae-fanout-head">
+                <span class="rvp-pill"><span class="av av-sm">BK</span>Brock Kennick · RVP</span>
+                <span class="avp-pill">Keith White · AVP</span>
+              </div>
+              <div class="ae-fanout-cards">
+                <div class="ae-fanout-card">
+                  <span class="av av-sm" style="background: var(--role-upsell-dot); color: var(--role-upsell-text);">CJ</span>
+                  <span class="ae-pill-text"><span class="ae-pill-name">Colby Johnson</span><span class="ae-pill-role">UPSELL · via Shana</span></span>
+                  <span class="saengage-ae-count">5</span>
+                </div>
+                <div class="ae-fanout-card">
+                  <span class="av av-sm" style="background: var(--role-extra-dot); color: var(--role-extra-text);">PR</span>
+                  <span class="ae-pill-text"><span class="ae-pill-name">Patrick Rice</span><span class="ae-pill-role">EXTRA · via Shana</span></span>
+                  <span class="saengage-ae-count">1</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="ae-fanout-group">
+              <div class="ae-fanout-head">
+                <span class="rvp-pill"><span class="av av-sm">EB</span>Eric Borland · RVP</span>
+                <span class="avp-pill">Keith White · AVP</span>
+              </div>
+              <div class="ae-fanout-cards">
+                <div class="ae-fanout-card">
+                  <span class="av av-sm" style="background: var(--role-upsell-dot); color: var(--role-upsell-text);">FK</span>
+                  <span class="ae-pill-text"><span class="ae-pill-name">Fui Kinikini</span><span class="ae-pill-role">UPSELL · via Shana</span></span>
+                  <span class="saengage-ae-count">2</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="ae-fanout-group">
+              <div class="ae-fanout-head">
+                <span class="rvp-pill"><span class="av av-sm">DH</span>Doug Hut · RVP</span>
+                <span class="avp-pill">John Pasalano · AVP</span>
+              </div>
+              <div class="ae-fanout-cards">
+                <div class="ae-fanout-card">
+                  <span class="av av-sm" style="background: var(--role-corpnl-dot); color: white;">GA</span>
+                  <span class="ae-pill-text"><span class="ae-pill-name">Grant Anderson</span><span class="ae-pill-role">CORP NL · via Megha</span></span>
+                  <span class="saengage-ae-count">3</span>
+                </div>
+                <div class="ae-fanout-card">
+                  <span class="av av-sm" style="background: var(--role-corpnl-dot); color: white;">CS</span>
+                  <span class="ae-pill-text"><span class="ae-pill-name">Chris Sink</span><span class="ae-pill-role">CORP NL · via Megha</span></span>
+                  <span class="saengage-ae-count">2</span>
+                </div>
+                <div class="ae-fanout-card">
+                  <span class="av av-sm" style="background: var(--role-corpnl-dot); color: white;">GO</span>
+                  <span class="ae-pill-text"><span class="ae-pill-name">Greg Olson</span><span class="ae-pill-role">CORP NL · via Mike</span></span>
+                  <span class="saengage-ae-count">2</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="ae-fanout-group">
+              <div class="ae-fanout-head">
+                <span class="rvp-pill"><span class="av av-sm">CH</span>Cameron Housley · RVP</span>
+                <span class="avp-pill">Andrew Rich · AVP</span>
+              </div>
+              <div class="ae-fanout-cards">
+                <div class="ae-fanout-card">
+                  <span class="av av-sm" style="background: var(--role-newlogo-dot); color: white;">RV</span>
+                  <span class="ae-pill-text"><span class="ae-pill-name">Ryan Verno</span><span class="ae-pill-role">NEW LOGO · via Adam</span></span>
+                  <span class="saengage-ae-count">3</span>
+                </div>
+                <div class="ae-fanout-card">
+                  <span class="av av-sm" style="background: var(--role-newlogo-dot); color: white;">BS</span>
+                  <span class="ae-pill-text"><span class="ae-pill-name">Bradey Sholly</span><span class="ae-pill-role">NEW LOGO · via Adam</span></span>
+                  <span class="saengage-ae-count">1</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="annot annot-l" style="right: calc(100% + 14px); top: 220px;">SA selection complement to<br/>Panel 2's by-SE engagement grid.<br/>No bench (Doug is the partner).</div>
+        </section>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================
+       STATE 3 — PANEL 3 CLOSE-UP (fan-out detail)
+       ============================================= -->
+  <section class="mock-section" id="state-3">
+    <div class="mock-state-label"><span class="mock-state-num">3</span>Panel 3 close-up</div>
+    <h2 class="mock-h2">Detail of the fan-out at higher zoom</h2>
+    <p class="mock-state-sub">Just Panel 3, shown wider so you can inspect the fan-out groups, AE cards, mint diamond glyphs, and the aggregated bench. No converging SVG lines; the geometry is just stacked groups.</p>
+
+    <div class="frame" style="max-width: 720px; margin: 0 auto;">
+      <section class="panel" style="border-radius: 14px;">
+        <div class="panel-head">
+          <span class="panel-num">3</span>
+          <div>
+            <h3 class="panel-title">Relationships: <strong>Ron Karas</strong> <span class="panel-arrow">→ 4 AEs across 2 RVPs</span></h3>
+            <p class="panel-sub">All AEs Ron covers, with their commercial reporting paths.</p>
+          </div>
+        </div>
+
+        <div class="se-chain">
+          <span class="se-chain-pill"><span class="av">CH</span><span><span class="se-chain-name">Cassidy Hilton</span><br><span class="se-chain-sub">SE Org Lead</span></span></span>
+          <span class="se-chain-arrow">→</span>
+          <span class="se-chain-pill"><span class="av" style="background: var(--mgr-chris);">CH</span><span><span class="se-chain-name">Chris Hunter</span><br><span class="se-chain-sub">SE Manager</span></span></span>
+          <span class="se-chain-arrow">→</span>
+          <span class="se-chain-pill active"><span class="av">RK</span><span><span class="se-chain-name">Ron Karas</span><br><span class="se-chain-sub">Solutions Engineer</span></span></span>
+        </div>
+
+        <div class="ae-fanout-bridge"></div>
+
+        <div class="ae-summary">
+          <div class="ae-summary-stat"><strong>4</strong> AEs</div>
+          <div class="ae-summary-stat"><strong>2</strong> RVPs</div>
+          <div class="ae-summary-stat"><strong>1</strong> AVP</div>
+        </div>
+
+        <div class="ae-fanout">
+          <div class="ae-fanout-group">
+            <div class="ae-fanout-head">
+              <span class="rvp-pill"><span class="av av-sm">TR</span>Taylor Rust · RVP</span>
+              <span class="avp-pill">Andrew Rich · AVP</span>
+            </div>
+            <div class="ae-fanout-cards">
+              <div class="ae-fanout-card poc-active">
+                <span class="av av-sm" style="background: var(--role-upsell-dot); color: var(--role-upsell-text);">SB</span>
+                <span class="ae-pill-text"><span class="ae-pill-name">Steve Brown</span><span class="ae-pill-role">UPSELL</span></span>
+              </div>
+              <div class="ae-fanout-card">
+                <span class="av av-sm" style="background: var(--role-upsell-dot); color: var(--role-upsell-text);">JT</span>
+                <span class="ae-pill-text"><span class="ae-pill-name">Jarrick Tilby</span><span class="ae-pill-role">UPSELL</span></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="ae-fanout-group">
+            <div class="ae-fanout-head">
+              <span class="rvp-pill"><span class="av av-sm">CM</span>Casey Morgan · RVP</span>
+              <span class="avp-pill">Andrew Rich · AVP</span>
+            </div>
+            <div class="ae-fanout-cards">
+              <div class="ae-fanout-card poc-active">
+                <span class="av av-sm" style="background: var(--role-newlogo-dot); color: white;">NL</span>
+                <span class="ae-pill-text"><span class="ae-pill-name">Natalie Lever</span><span class="ae-pill-role">NEW LOGO</span></span>
+              </div>
+              <div class="ae-fanout-card">
+                <span class="av av-sm" style="background: var(--role-upsell-dot); color: var(--role-upsell-text);">JP</span>
+                <span class="ae-pill-text"><span class="ae-pill-name">Joe Pecora</span><span class="ae-pill-role">UPSELL</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="poc-bench" style="margin-top: 14px;">
+          <div class="poc-bench-head">
+            <div class="poc-bench-title">POC Architect partners <span style="font-weight:500; text-transform: none; letter-spacing: 0;">(across 4 AEs)</span></div>
+            <div class="poc-bench-window">last 90d · 4 deals total</div>
+          </div>
+          <div class="poc-bench-pills">
+            <button class="poc-pill" type="button">
+              <span class="av av-mint">DC</span>
+              <span class="poc-pill-name">Doug Carter</span>
+              <span class="poc-pill-count">3</span>
+            </button>
+            <button class="poc-pill" type="button">
+              <span class="av av-mint">SK</span>
+              <span class="poc-pill-name">Sara Krishnamurthy</span>
+              <span class="poc-pill-count">1</span>
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <!-- =============================================
+       STATE 4 — DISCREPANCIES
+       ============================================= -->
+  <section class="mock-section" id="state-4">
+    <div class="mock-state-label"><span class="mock-state-num">4</span>Discrepancies — new POC section</div>
+    <h2 class="mock-h2">Four new SA-relevant row groups</h2>
+    <p class="mock-state-sub">Lives alongside the existing discrepancy sections. Click any row → selects target and reframes Overview.</p>
+
+    <div class="frame" style="max-width: 1100px;">
+      <div style="padding: 20px;">
+
+        <div class="disc-section">
+          <div class="disc-section-head">
+            <span class="disc-section-icon"></span>
+            <span class="disc-section-title">POC Architect coverage</span>
+            <span class="disc-section-sub">Derived from live deals (current FY-to-date, NAM)</span>
+          </div>
+
+          <div class="disc-row-group">
+            <div class="disc-row-title">
+              AEs with active pipeline & no SA partner
+              <span class="disc-row-count">14</span>
+            </div>
+            <div class="disc-row-list">
+              <div class="disc-row">
+                <span class="av av-sm">AB</span>
+                <span class="disc-row-name">Adam Berry</span>
+                <span style="font-size: 11px; color: var(--text-secondary);">Account Executive · Corp NL · covered by Megha Kumar</span>
+                <span class="disc-row-pill warn">$340K pipeline</span>
+                <span class="disc-row-meta">3 deals</span>
+              </div>
+              <div class="disc-row">
+                <span class="av av-sm">JT</span>
+                <span class="disc-row-name">Jake Talbot</span>
+                <span style="font-size: 11px; color: var(--text-secondary);">Account Executive · ENT · covered by Ty Yagi</span>
+                <span class="disc-row-pill warn">$290K pipeline</span>
+                <span class="disc-row-meta">2 deals</span>
+              </div>
+              <div class="disc-row">
+                <span class="av av-sm">SB</span>
+                <span class="disc-row-name">Scott Bartholomew</span>
+                <span style="font-size: 11px; color: var(--text-secondary);">Account Executive · Corp Upsell · covered by Shana Brennan</span>
+                <span class="disc-row-pill warn">$110K pipeline</span>
+                <span class="disc-row-meta">1 deal</span>
+              </div>
+              <div style="font-size: 11px; color: var(--text-secondary); padding: 4px 12px;">+11 more</div>
+            </div>
+          </div>
+
+          <div class="disc-row-group">
+            <div class="disc-row-title">
+              Observed SA pairs missing from asserted coverage
+              <span class="disc-row-count">3</span>
+            </div>
+            <div class="disc-row-list">
+              <div class="disc-row">
+                <span style="font-size: 11px; color: var(--text-secondary); width: 110px;">Deal pair:</span>
+                <span class="disc-row-name">Megha Kumar → Greg Olson</span>
+                <span style="font-size: 11px; color: var(--text-secondary);">+ POC Doug Carter (2 deals) — SE→AE not in asserted matrix</span>
+                <span class="disc-row-pill" style="margin-left:auto;">re-check coverage</span>
+              </div>
+              <div class="disc-row">
+                <span style="font-size: 11px; color: var(--text-secondary); width: 110px;">Deal pair:</span>
+                <span class="disc-row-name">Mike Newcomb → Adam Dunkley</span>
+                <span style="font-size: 11px; color: var(--text-secondary);">+ POC Sara K (1 deal)</span>
+                <span class="disc-row-pill" style="margin-left:auto;">re-check coverage</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="disc-row-group">
+            <div class="disc-row-title">
+              Unmapped POC names
+              <span class="disc-row-count">2</span>
+              <span style="font-size: 10px; color: var(--text-secondary); font-weight: 400;">(deals data references names not in the roster / nameMap)</span>
+            </div>
+            <div class="disc-row-list">
+              <div class="disc-row">
+                <span style="font-size: 11px; color: var(--text-secondary);">Deal-system name:</span>
+                <span class="disc-row-name">"Carter, Doug"</span>
+                <span style="font-size: 11px; color: var(--text-secondary);">→ likely Doug Carter — add nameMap alias</span>
+                <span class="disc-row-pill" style="margin-left:auto;">5 deals</span>
+              </div>
+              <div class="disc-row">
+                <span style="font-size: 11px; color: var(--text-secondary);">Deal-system name:</span>
+                <span class="disc-row-name">"J. Tanaka"</span>
+                <span style="font-size: 11px; color: var(--text-secondary);">→ no roster match</span>
+                <span class="disc-row-pill" style="margin-left:auto;">1 deal</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="disc-row-group">
+            <div class="disc-row-title">
+              Idle SAs (no engagements in window)
+              <span class="disc-row-count">1</span>
+            </div>
+            <div class="disc-row-list">
+              <div class="disc-row">
+                <span class="av av-sm av-mint">JM</span>
+                <span class="disc-row-name">Jen Morales</span>
+                <span style="font-size: 11px; color: var(--text-secondary);">POC Architect · reports to Laura Qualey</span>
+                <span class="disc-row-meta">0 deals in last 90d</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================
+       STATE 5 — PANEL 3 REFRAME, N-AE CASE
+       ============================================= -->
+  <section class="mock-section" id="state-5">
+    <div class="mock-state-label"><span class="mock-state-num">5</span>Panel 3 reframe — SE selected (Ron Karas, 4 AEs)</div>
+    <h2 class="mock-h2">Adaptive fan-out: tech chain at top, AEs grouped by RVP, aggregated bench at bottom</h2>
+    <p class="mock-state-sub">Fixes the "first AE only" inaccuracy. Tech chain (single, shared across all AEs) sits at the top. Each AE-group below carries its own RVP+AVP commercial chain. The mint diamond glyphs from Shape A still appear on individual AE cards that have POC participation. Bench aggregates partners across all 4 AEs and labels itself accordingly.</p>
+
+    <div class="frame">
+      <div class="app-header">
+        <div>
+          <h2 class="app-title">Sales Org Visualizer</h2>
+          <p class="app-subtitle">SE / SA ↔ AE relationships</p>
+        </div>
+        <div class="app-header-actions"><span class="pill-btn">🔍 Search ⌘K</span></div>
+      </div>
+
+      <div class="filter-rail">
+        <span class="pill-btn">⟨ Filters</span>
+        <span class="selected-chip"><span>SELECTED</span> <span class="selected-chip-name">Ron Karas</span> <span class="selected-chip-x">×</span></span>
+        <span style="font-size:11px; color: var(--text-secondary);">Three live perspectives — full org, SE-centric, AE-centric — that stay linked as you click.</span>
+      </div>
+
+      <div class="overview-panels">
+
+        <!-- Panel 1 — same as today, scoped to Ron -->
+        <section class="panel">
+          <div class="panel-head">
+            <span class="panel-num">1</span>
+            <div>
+              <h3 class="panel-title">Full org</h3>
+              <p class="panel-sub">SE → AE coverage at a glance.</p>
+            </div>
+          </div>
+          <div class="ribbon-cols">
+            <div>
+              <div class="ribbon-col-title">SE org (by manager)</div>
+              <div class="mgr-card chris active">
+                <div class="mgr-head">
+                  <span class="av av-md" style="background: var(--mgr-chris);">CH</span>
+                  <span style="display:flex; flex-direction:column;">
+                    <span class="mgr-name">Chris Hunter</span>
+                    <span class="mgr-count">1 SE shown · scoped</span>
+                  </span>
+                </div>
+                <div class="mgr-chips">
+                  <span class="init-chip active">RK</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="ribbon-col-title">Sales (by AVP / RVP)</div>
+              <div class="ribbon-group">
+                <div class="ribbon-group-head"><span class="rg-name">Taylor Rust</span><span class="rg-sub">ENTERPRISE / SR CORP</span><span class="rg-count">2</span></div>
+                <div class="ribbon-group-body">
+                  <span class="ribbon-node upsell"><span class="dot"></span>Steve Brown<span class="poc-mark poc-mark-sm"></span></span>
+                  <span class="ribbon-node upsell"><span class="dot"></span>Jarrick Tilby</span>
+                </div>
+              </div>
+              <div class="ribbon-group">
+                <div class="ribbon-group-head"><span class="rg-name">Casey Morgan</span><span class="rg-sub">ENTERPRISE / SR CORP</span><span class="rg-count">2</span></div>
+                <div class="ribbon-group-body">
+                  <span class="ribbon-node newlogo"><span class="dot"></span>Natalie Lever<span class="poc-mark poc-mark-sm"></span></span>
+                  <span class="ribbon-node upsell"><span class="dot"></span>Joe Pecora</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Panel 2 — SE-centric matrix row, unchanged behavior, with Shape A strip -->
+        <section class="panel">
+          <div class="panel-head">
+            <span class="panel-num">2</span>
+            <div>
+              <h3 class="panel-title">SE-centric: <strong>Ron Karas</strong> <span class="panel-arrow">→ matrix row</span></h3>
+              <p class="panel-sub">Manager chain → AEs by RVP → load.</p>
+            </div>
+          </div>
+          <div class="se-chain">
+            <span class="se-chain-pill"><span class="av">CH</span><span><span class="se-chain-name">Cassidy Hilton</span><br><span class="se-chain-sub">SE Org Lead</span></span></span>
+            <span class="se-chain-arrow">→</span>
+            <span class="se-chain-pill"><span class="av" style="background: var(--mgr-chris);">CH</span><span><span class="se-chain-name">Chris Hunter</span><br><span class="se-chain-sub">SE Manager</span></span></span>
+            <span class="se-chain-arrow">→</span>
+            <span class="se-chain-pill active"><span class="av">RK</span><span><span class="se-chain-name">Ron Karas</span><br><span class="se-chain-sub">Solutions Engineer</span></span></span>
+          </div>
+          <div class="grid-label">AEs covered across RVPs</div>
+          <div class="matrix-grid" style="--cols: 2;">
+            <div class="matrix-col">
+              <div class="matrix-col-head">Taylor Rust</div>
+              <div class="matrix-col-cell">
+                <span class="ae-chip upsell"><span class="dot"></span>Steve Brown<span class="poc-mark poc-mark-cell"></span></span>
+                <span class="ae-chip upsell"><span class="dot"></span>Jarrick Tilby</span>
+              </div>
+            </div>
+            <div class="matrix-col">
+              <div class="matrix-col-head">Casey Morgan</div>
+              <div class="matrix-col-cell">
+                <span class="ae-chip newlogo"><span class="dot"></span>Natalie Lever<span class="poc-mark poc-mark-cell"></span></span>
+                <span class="ae-chip upsell"><span class="dot"></span>Joe Pecora</span>
+              </div>
+            </div>
+          </div>
+          <div class="poc-strip">
+            <div class="poc-strip-head">
+              <div class="poc-strip-title">POC Architect partners</div>
+              <div class="poc-strip-window">last 90d</div>
+            </div>
+            <div class="poc-pills">
+              <button class="poc-pill" type="button"><span class="av av-mint">DC</span><span class="poc-pill-name">Doug Carter</span><span class="poc-pill-count">3</span></button>
+              <button class="poc-pill" type="button"><span class="av av-mint">SK</span><span class="poc-pill-name">Sara K</span><span class="poc-pill-count">1</span></button>
+            </div>
+          </div>
+          <div class="load-anchor">
+            <div class="load-head">
+              <span class="load-label">Ron Karas load</span>
+              <span class="load-pct bad">133%</span>
+              <span class="load-badge good" style="background:oklch(0.96 0.04 20); color:oklch(0.5 0.13 20);">OVERLOADED</span>
+            </div>
+            <div class="load-meter">
+              <div class="load-fill" style="width: 89%;"></div>
+              <div class="load-target" style="left: 67%;"></div>
+              <div class="load-marker" style="left: 89%;"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Panel 3 — NEW fan-out geometry -->
+        <section class="panel" style="position: relative;">
+          <div class="panel-head">
+            <span class="panel-num">3</span>
+            <div>
+              <h3 class="panel-title">Relationships: <strong>Ron Karas</strong> <span class="panel-arrow">→ 4 AEs across 2 RVPs</span></h3>
+              <p class="panel-sub">All AEs Ron covers, with their commercial reporting paths.</p>
+            </div>
+          </div>
+
+          <div class="se-chain">
+            <span class="se-chain-pill"><span class="av">CH</span><span><span class="se-chain-name">Cassidy Hilton</span><br><span class="se-chain-sub">SE Org Lead</span></span></span>
+            <span class="se-chain-arrow">→</span>
+            <span class="se-chain-pill"><span class="av" style="background: var(--mgr-chris);">CH</span><span><span class="se-chain-name">Chris Hunter</span><br><span class="se-chain-sub">SE Manager</span></span></span>
+            <span class="se-chain-arrow">→</span>
+            <span class="se-chain-pill active"><span class="av">RK</span><span><span class="se-chain-name">Ron Karas</span><br><span class="se-chain-sub">Solutions Engineer</span></span></span>
+          </div>
+
+          <div class="ae-fanout-bridge"></div>
+
+          <div class="ae-summary">
+            <div class="ae-summary-stat"><strong>4</strong> AEs</div>
+            <div class="ae-summary-stat"><strong>2</strong> RVPs</div>
+            <div class="ae-summary-stat"><strong>1</strong> AVP</div>
+          </div>
+
+          <div class="ae-fanout">
+            <div class="ae-fanout-group">
+              <div class="ae-fanout-head">
+                <span class="rvp-pill"><span class="av av-sm">TR</span>Taylor Rust · RVP</span>
+                <span class="avp-pill">Andrew Rich · AVP</span>
+              </div>
+              <div class="ae-fanout-cards">
+                <div class="ae-fanout-card poc-active">
+                  <span class="av av-sm" style="background: var(--role-upsell-dot); color: var(--role-upsell-text);">SB</span>
+                  <span class="ae-pill-text"><span class="ae-pill-name">Steve Brown</span><span class="ae-pill-role">UPSELL</span></span>
+                </div>
+                <div class="ae-fanout-card">
+                  <span class="av av-sm" style="background: var(--role-upsell-dot); color: var(--role-upsell-text);">JT</span>
+                  <span class="ae-pill-text"><span class="ae-pill-name">Jarrick Tilby</span><span class="ae-pill-role">UPSELL</span></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="ae-fanout-group">
+              <div class="ae-fanout-head">
+                <span class="rvp-pill"><span class="av av-sm">CM</span>Casey Morgan · RVP</span>
+                <span class="avp-pill">Andrew Rich · AVP</span>
+              </div>
+              <div class="ae-fanout-cards">
+                <div class="ae-fanout-card poc-active">
+                  <span class="av av-sm" style="background: var(--role-newlogo-dot); color: var(--role-newlogo-text);">NL</span>
+                  <span class="ae-pill-text"><span class="ae-pill-name">Natalie Lever</span><span class="ae-pill-role">NEW LOGO</span></span>
+                </div>
+                <div class="ae-fanout-card">
+                  <span class="av av-sm" style="background: var(--role-upsell-dot); color: var(--role-upsell-text);">JP</span>
+                  <span class="ae-pill-text"><span class="ae-pill-name">Joe Pecora</span><span class="ae-pill-role">UPSELL</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="annot annot-l" style="right: calc(100% + 14px); top: 220px;">NEW — adaptive Panel 3.<br/>Tech chain at top, AEs grouped by<br/>RVP. Mint diamond shows POC.</div>
+
+          <div class="poc-bench" style="margin-top: 14px;">
+            <div class="poc-bench-head">
+              <div class="poc-bench-title">POC Architect partners <span style="font-weight:500; text-transform: none; letter-spacing: 0;">(across 4 AEs)</span></div>
+              <div class="poc-bench-window">last 90d</div>
+            </div>
+            <div class="poc-bench-pills">
+              <button class="poc-pill" type="button"><span class="av av-mint">DC</span><span class="poc-pill-name">Doug Carter</span><span class="poc-pill-count">3</span></button>
+              <button class="poc-pill" type="button"><span class="av av-mint">SK</span><span class="poc-pill-name">Sara K</span><span class="poc-pill-count">1</span></button>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================
+       STATE 6 — N=1 vs N=4 (BOTH FAN-OUT)
+       ============================================= -->
+  <section class="mock-section" id="state-6">
+    <div class="mock-state-label"><span class="mock-state-num">6</span>Geometry consistency — N=1 vs N=4</div>
+    <h2 class="mock-h2">Same fan-out, different scope counts</h2>
+    <p class="mock-state-sub">Left: a single AE selected (Steve Brown) — fan-out at N=1. The selected AE card is highlighted; the bench is per-AE. Right: SE selected (Ron Karas) — fan-out at N=4. The bench aggregates across all in-scope AEs. One geometry, two densities, always honest about what's actually in scope.</p>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 1200px;">
+
+      <!-- N=1 fan-out -->
+      <div class="frame">
+        <section class="panel" style="border-radius: 14px; min-height: 580px;">
+          <div class="panel-head">
+            <span class="panel-num">3</span>
+            <div>
+              <h3 class="panel-title">Relationships: <strong>Steve Brown</strong> <span class="panel-arrow">→ 1 AE in scope</span></h3>
+              <p class="panel-sub"><span style="color: var(--accent-text); font-weight:600;">N=1</span> · fan-out at minimum density.</p>
+            </div>
+          </div>
+          <div class="se-chain">
+            <span class="se-chain-pill"><span class="av">CH</span><span><span class="se-chain-name">Cassidy Hilton</span><br><span class="se-chain-sub">SE Org Lead</span></span></span>
+            <span class="se-chain-arrow">→</span>
+            <span class="se-chain-pill"><span class="av" style="background: var(--mgr-chris);">CH</span><span><span class="se-chain-name">Chris Hunter</span><br><span class="se-chain-sub">SE Manager</span></span></span>
+            <span class="se-chain-arrow">→</span>
+            <span class="se-chain-pill"><span class="av">RK</span><span><span class="se-chain-name">Ron Karas</span><br><span class="se-chain-sub">Solutions Engineer</span></span></span>
+          </div>
+          <div class="ae-fanout-bridge"></div>
+          <div class="ae-fanout">
+            <div class="ae-fanout-group">
+              <div class="ae-fanout-head">
+                <span class="rvp-pill"><span class="av av-sm">TR</span>Taylor Rust · RVP</span>
+                <span class="avp-pill">Andrew Rich · AVP</span>
+              </div>
+              <div class="ae-fanout-cards">
+                <div class="ae-fanout-card active poc-active" style="padding: 8px 14px 8px 8px;">
+                  <span class="av av-md" style="background: var(--role-upsell-dot); color: var(--role-upsell-text);">SB</span>
+                  <span class="ae-pill-text">
+                    <span class="ae-pill-name" style="font-size: 13px;">Steve Brown</span>
+                    <span class="ae-pill-role">ACCOUNT EXECUTIVE · UPSELL</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="poc-bench" style="margin-top: 14px;">
+            <div class="poc-bench-head">
+              <div class="poc-bench-title">POC Architect partners</div>
+              <div class="poc-bench-window">last 90d</div>
+            </div>
+            <div class="poc-bench-pills">
+              <button class="poc-pill" type="button"><span class="av av-mint">DC</span><span class="poc-pill-name">Doug Carter</span><span class="poc-pill-count">2</span></button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- N=4 fan-out -->
+      <div class="frame">
+        <section class="panel" style="border-radius: 14px; min-height: 580px;">
+          <div class="panel-head">
+            <span class="panel-num">3</span>
+            <div>
+              <h3 class="panel-title">Relationships: <strong>Ron Karas</strong> <span class="panel-arrow">→ 4 AEs across 2 RVPs</span></h3>
+              <p class="panel-sub"><span style="color: var(--accent-text); font-weight:600;">N=4</span> · fan-out at typical density.</p>
+            </div>
+          </div>
+          <div class="se-chain">
+            <span class="se-chain-pill"><span class="av">CH</span><span><span class="se-chain-name">Cassidy Hilton</span><br><span class="se-chain-sub">SE Org Lead</span></span></span>
+            <span class="se-chain-arrow">→</span>
+            <span class="se-chain-pill"><span class="av" style="background: var(--mgr-chris);">CH</span><span><span class="se-chain-name">Chris Hunter</span><br><span class="se-chain-sub">SE Manager</span></span></span>
+            <span class="se-chain-arrow">→</span>
+            <span class="se-chain-pill active"><span class="av">RK</span><span><span class="se-chain-name">Ron Karas</span><br><span class="se-chain-sub">Solutions Engineer</span></span></span>
+          </div>
+          <div class="ae-fanout-bridge"></div>
+          <div class="ae-summary">
+            <div class="ae-summary-stat"><strong>4</strong> AEs</div>
+            <div class="ae-summary-stat"><strong>2</strong> RVPs</div>
+            <div class="ae-summary-stat"><strong>1</strong> AVP</div>
+          </div>
+          <div class="ae-fanout">
+            <div class="ae-fanout-group">
+              <div class="ae-fanout-head">
+                <span class="rvp-pill"><span class="av av-sm">TR</span>Taylor Rust · RVP</span>
+                <span class="avp-pill">Andrew Rich · AVP</span>
+              </div>
+              <div class="ae-fanout-cards">
+                <div class="ae-fanout-card poc-active">
+                  <span class="av av-sm" style="background: var(--role-upsell-dot); color: var(--role-upsell-text);">SB</span>
+                  <span class="ae-pill-text"><span class="ae-pill-name">Steve Brown</span><span class="ae-pill-role">UPSELL</span></span>
+                </div>
+                <div class="ae-fanout-card">
+                  <span class="av av-sm" style="background: var(--role-upsell-dot); color: var(--role-upsell-text);">JT</span>
+                  <span class="ae-pill-text"><span class="ae-pill-name">Jarrick Tilby</span><span class="ae-pill-role">UPSELL</span></span>
+                </div>
+              </div>
+            </div>
+            <div class="ae-fanout-group">
+              <div class="ae-fanout-head">
+                <span class="rvp-pill"><span class="av av-sm">CM</span>Casey Morgan · RVP</span>
+                <span class="avp-pill">Andrew Rich · AVP</span>
+              </div>
+              <div class="ae-fanout-cards">
+                <div class="ae-fanout-card poc-active">
+                  <span class="av av-sm" style="background: var(--role-newlogo-dot); color: white;">NL</span>
+                  <span class="ae-pill-text"><span class="ae-pill-name">Natalie Lever</span><span class="ae-pill-role">NEW LOGO</span></span>
+                </div>
+                <div class="ae-fanout-card">
+                  <span class="av av-sm" style="background: var(--role-upsell-dot); color: var(--role-upsell-text);">JP</span>
+                  <span class="ae-pill-text"><span class="ae-pill-name">Joe Pecora</span><span class="ae-pill-role">UPSELL</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="poc-bench" style="margin-top: 14px;">
+            <div class="poc-bench-head">
+              <div class="poc-bench-title">POC Architect partners <span style="font-weight:500; text-transform: none; letter-spacing: 0;">(across 4 AEs)</span></div>
+              <div class="poc-bench-window">last 90d</div>
+            </div>
+            <div class="poc-bench-pills">
+              <button class="poc-pill" type="button"><span class="av av-mint">DC</span><span class="poc-pill-name">Doug Carter</span><span class="poc-pill-count">3</span></button>
+              <button class="poc-pill" type="button"><span class="av av-mint">SK</span><span class="poc-pill-name">Sara K</span><span class="poc-pill-count">1</span></button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+    </div>
+  </section>
+
+  <div style="margin: 48px 0 24px; padding: 16px 20px; background: var(--surface); border-radius: var(--radius-card); box-shadow: var(--shadow); font-size: 12px; color: var(--text-secondary);">
+    <strong style="color: var(--text-primary);">Notes on this mock:</strong>
+    Numbers, names, and deal counts are illustrative — they're plausible but not pulled from your live data. Layout proportions match <code>redesign-default.png</code> at typical zoom. The diamond glyph color (<code>--poc-mint-mark</code>) and outlined-pill treatment can be tuned in the browser before V1.
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,33 +1,30 @@
 {
-  "managers": {
-    "Dan":   { "accent": "oklch(0.63 0.11 195)" },
-    "Tyler": { "accent": "oklch(0.63 0.11 210)" },
-    "Chris": { "accent": "oklch(0.63 0.11 225)" },
-    "LQ":    { "accent": "oklch(0.63 0.11 238)" },
-    "Blake": { "accent": "oklch(0.63 0.09 250)" }
-  },
-  "pods": {
-    "Doug":              { "accent": "oklch(0.63 0.11 195)" },
-    "Cameron":           { "accent": "oklch(0.63 0.11 210)" },
-    "Dave B":            { "accent": "oklch(0.63 0.11 225)" },
-    "Brock":             { "accent": "oklch(0.63 0.11 238)" },
-    "Sione":             { "accent": "oklch(0.63 0.09 183)" },
-    "Eric":              { "accent": "oklch(0.63 0.09 250)" },
-    "Ty Yagi Ecosystem": { "accent": "oklch(0.55 0.10 165)" },
-    "Nate Ecosystem":    { "accent": "oklch(0.55 0.10 145)" },
-    "Mike H":            { "accent": "oklch(0.63 0.11 225)" },
-    "Jordan":            { "accent": "oklch(0.63 0.09 250)" },
-    "Taylor":            { "accent": "oklch(0.63 0.11 210)" },
-    "Casey":             { "accent": "oklch(0.55 0.10 165)" }
+  "_doc": "Brand-aligned palette. Source of truth: domo-styleguide.mdc. Domo Blue (#99CCEE) is the *focus / selection* accent and never appears as a role-type fill so it stays the dominant interactive signal.",
+  "brand": {
+    "primary": "#99CCEE",
+    "primaryHover": "#7AB3D8",
+    "secondary": "#FF9922",
+    "neutrals": ["#F1F6FA", "#DCE4EA", "#B7C1CB", "#68737F", "#3F454D"],
+    "accents": ["#776CB0", "#C179BD", "#ECA4DD", "#ADD4C1"]
   },
   "roleTypes": {
-    "Corporate NL":    "oklch(0.55 0.07 230)",
-    "New Logo":        "oklch(0.55 0.10 240)",
-    "Upsell":          "oklch(0.65 0.13 60)",
-    "Extra AE":        "oklch(0.55 0.13 25)",
-    "ISV":             "oklch(0.58 0.10 200)",
-    "Domo Everywhere": "oklch(0.60 0.12 80)",
-    "Ecosystem":       "oklch(0.55 0.10 155)",
-    "Enterprise":      "oklch(0.45 0.10 250)"
+    "Corporate NL":    { "fill": "#F1F6FA", "border": "#B7C1CB", "text": "#3F454D", "dot": "#68737F" },
+    "New Logo":        { "fill": "#F1ECF6", "border": "#C5BAD9", "text": "#3F2F5F", "dot": "#776CB0" },
+    "Upsell":          { "fill": "#FFF0DD", "border": "#F4D2A4", "text": "#7A4A0E", "dot": "#FF9922" },
+    "Ecosystem":       { "fill": "#E8F3EC", "border": "#B5D9C2", "text": "#2C5A3D", "dot": "#ADD4C1" },
+    "ISV":             { "fill": "#E0F0FA", "border": "#A8CFE5", "text": "#2C5A7A", "dot": "#7AB3D8" },
+    "Domo Everywhere": { "fill": "#FAF1E0", "border": "#E2CFA7", "text": "#7A5A14", "dot": "#D6A859" },
+    "Extra AE":        { "fill": "#FCEBEC", "border": "#E8B5BB", "text": "#7A2C32", "dot": "#D86C75" }
+  },
+  "segments": {
+    "Corp NL":     { "accent": "#776CB0", "soft": "#F1ECF6" },
+    "Corp Upsell": { "accent": "#FF9922", "soft": "#FFF0DD" },
+    "ENT":         { "accent": "#7AB3D8", "soft": "#E0F0FA" }
+  },
+  "managers": {
+    "Dan Wentworth": { "accent": "#776CB0" },
+    "Tyler Clark":   { "accent": "#FF9922" },
+    "Chris Hunter":  { "accent": "#7AB3D8" },
+    "Laura Qualey":  { "accent": "#ADD4C1" }
   }
 }

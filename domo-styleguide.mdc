@@ -1,0 +1,31 @@
+---
+description: Style guide for building apps in Domo
+alwaysApply: false
+---
+#### Domo App Design & UX
+
+- Prefer Domo UI (See Brand Guidlines) patterns and responsive layouts
+- Assume business users, not developers, are the end audience
+
+#### Domo brand Guidelines:
+
+Primary Color (Domo Blue): #99CCEE
+Primary Secondary Color: #FF9922
+
+Domo Neutral Colors:
+#F1F6FA
+#DCE4EA
+#B7C1CB
+#68737F
+#3F454D
+
+Domo Accents (Use Sparingly and can NEVER overpower Domo Blue)
+#776CB0
+#C179BD
+#ECA4DD
+#ADD4C1
+
+Fonts:
+Open Sans Bold is usually used for titles.
+Opens Sans Light is usually used for subtitles.
+Open Sans Regular is usually used for body copy.

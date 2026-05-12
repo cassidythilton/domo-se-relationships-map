@@ -46,6 +46,17 @@ export type CoverageEdge = {
   pipelineAcv: number;
 };
 
+/** Solutions Architect partner aggregated per (Sales Consultant, AE) pair.
+ *  Sourced from the Salesforce `PoC Sales Consultant` field — the legacy
+ *  name of what's now called a Solutions Architect.
+ */
+export type PocPartnerEdge = {
+  sc: string;
+  ae: string | null;
+  poc: string;
+  dealCount: number;
+};
+
 export type DealsSnapshot = {
   range: DateRange;
   /** SE-side metrics keyed by Sales Consultant name (deal-system name). */
@@ -60,6 +71,28 @@ export type DealsSnapshot = {
   pocSc: Array<{ name: string; count: number; pipelineAcv: number }>;
   /** Forecast Owners with active pipeline but no SC assigned. */
   uncoveredAes: Array<{ name: string; manager: string | null; pipelineAcv: number; dealCount: number }>;
+  /** Solutions Architect partners aggregated per (SC, AE). */
+  pocPartners: PocPartnerEdge[];
+  /** Map: SC name → ranked SA partners (most deals first). */
+  pocPartnersBySc: Map<string, Array<{ poc: string; dealCount: number }>>;
+  /** Map: AE name → ranked SA partners (most deals first). */
+  pocPartnersByAe: Map<string, Array<{ poc: string; dealCount: number }>>;
+  /**
+   * Indexed lookup for "did (sc, ae) have any SA partner on a deal?"
+   * Keyed `${sc}::${ae}` (deal-system names). Built once at snapshot
+   * load time so per-cell glyph rendering in the Panel 2 matrix is O(1).
+   *
+   * Internal field name keeps the `poc` prefix because the Salesforce
+   * source column is literally called `PoC Sales Consultant` — the
+   * legacy term for what's now called a Solutions Architect.
+   */
+  pocOnPair: Set<string>;
+  /**
+   * Per-pair ranked SA partners — used by matrix-cell tooltips that
+   * need to show specifically who partnered on THIS (SE, AE) pair, not
+   * any partner who ever touched the AE. Keyed `${sc}::${ae}`.
+   */
+  pocPartnersByPair: Map<string, Array<{ poc: string; dealCount: number }>>;
 };
 
 const ALIAS = "salesDeals";
@@ -96,7 +129,7 @@ function whereWindow(range: DateRange): string {
 export async function loadDealsSnapshot(range: DateRange): Promise<DealsSnapshot> {
   const where = whereWindow(range);
 
-  const [seRes, aeRes, edgeRes, pocRes, uncoveredRes] = await Promise.all([
+  const [seRes, aeRes, edgeRes, pocRes, uncoveredRes, pocPartnerRes] = await Promise.all([
     runSql(`
       SELECT
         \`Sales Consultant\` AS sc,
@@ -152,15 +185,26 @@ export async function loadDealsSnapshot(range: DateRange): Promise<DealsSnapshot
       SELECT
         \`Forecast Owner\` AS ae,
         MAX(\`Forecast Manager\`) AS fm,
-        SUM(CASE WHEN \`Is Pipeline\` = 'TRUE' THEN \`ACV (USD)\` ELSE 0 END) AS pipeline_acv,
-        SUM(CASE WHEN \`Is Pipeline\` = 'TRUE' THEN 1 ELSE 0 END) AS open_count
+        SUM(\`ACV (USD)\`) AS pipeline_acv,
+        COUNT(*) AS open_count
       FROM ${ALIAS}
       WHERE ${where} AND (\`Sales Consultant\` IS NULL OR \`Sales Consultant\` = '')
         AND \`Is Pipeline\` = 'TRUE'
         AND \`Forecast Owner\` IS NOT NULL AND \`Forecast Owner\` <> ''
       GROUP BY \`Forecast Owner\`
-      HAVING open_count > 0
       ORDER BY pipeline_acv DESC
+    `),
+    runSql(`
+      SELECT
+        \`Sales Consultant\` AS sc,
+        \`Forecast Owner\` AS ae,
+        \`PoC Sales Consultant\` AS poc,
+        COUNT(*) AS deal_count
+      FROM ${ALIAS}
+      WHERE ${where}
+        AND \`PoC Sales Consultant\` IS NOT NULL AND \`PoC Sales Consultant\` <> ''
+        AND \`Sales Consultant\`     IS NOT NULL AND \`Sales Consultant\`     <> ''
+      GROUP BY \`Sales Consultant\`, \`Forecast Owner\`, \`PoC Sales Consultant\`
     `),
   ]);
 
@@ -232,6 +276,51 @@ export async function loadDealsSnapshot(range: DateRange): Promise<DealsSnapshot
     dealCount: num(r[3]),
   }));
 
+  const pocPartners: PocPartnerEdge[] = pocPartnerRes.rows.map((r) => ({
+    sc: str(r[0]),
+    ae: str(r[1]) || null,
+    poc: str(r[2]),
+    dealCount: num(r[3]),
+  }));
+
+  // Aggregate per SC and per AE for fast lookup.
+  const pocPartnersBySc = new Map<string, Array<{ poc: string; dealCount: number }>>();
+  const pocPartnersByAe = new Map<string, Array<{ poc: string; dealCount: number }>>();
+  const accum = (
+    map: Map<string, Array<{ poc: string; dealCount: number }>>,
+    key: string,
+    poc: string,
+    n: number,
+  ) => {
+    const list = map.get(key) ?? [];
+    const existing = list.find((x) => x.poc === poc);
+    if (existing) existing.dealCount += n;
+    else list.push({ poc, dealCount: n });
+    map.set(key, list);
+  };
+  for (const e of pocPartners) {
+    if (e.sc) accum(pocPartnersBySc, e.sc, e.poc, e.dealCount);
+    if (e.ae) accum(pocPartnersByAe, e.ae, e.poc, e.dealCount);
+  }
+  for (const list of pocPartnersBySc.values()) list.sort((a, b) => b.dealCount - a.dealCount);
+  for (const list of pocPartnersByAe.values()) list.sort((a, b) => b.dealCount - a.dealCount);
+
+  const pocOnPair = new Set<string>();
+  const pocPartnersByPair = new Map<string, Array<{ poc: string; dealCount: number }>>();
+  for (const e of pocPartners) {
+    if (!e.sc || !e.ae) continue;
+    const k = `${e.sc}::${e.ae}`;
+    pocOnPair.add(k);
+    const list = pocPartnersByPair.get(k) ?? [];
+    const existing = list.find((x) => x.poc === e.poc);
+    if (existing) existing.dealCount += e.dealCount;
+    else list.push({ poc: e.poc, dealCount: e.dealCount });
+    pocPartnersByPair.set(k, list);
+  }
+  for (const list of pocPartnersByPair.values()) {
+    list.sort((a, b) => b.dealCount - a.dealCount);
+  }
+
   return {
     range,
     seMetrics,
@@ -241,5 +330,10 @@ export async function loadDealsSnapshot(range: DateRange): Promise<DealsSnapshot
     edges,
     pocSc,
     uncoveredAes,
+    pocPartners,
+    pocPartnersBySc,
+    pocPartnersByAe,
+    pocOnPair,
+    pocPartnersByPair,
   };
 }

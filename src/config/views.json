@@ -1,20 +1,26 @@
 {
   "views": [
     {
-      "key": "scOrg",
-      "label": "SC Org",
-      "group": "segment",
-      "segmentFilter": "SC Org",
+      "key": "fullOrg",
+      "label": "Full org",
+      "group": "overview",
       "defaultDensity": 1,
-      "densities": [1, 2, 3]
+      "densities": [1, 2]
+    },
+    {
+      "key": "focus",
+      "label": "Focus",
+      "group": "overview",
+      "defaultDensity": 1,
+      "densities": [1]
     },
     {
       "key": "corpNL",
-      "label": "Corp NL",
+      "label": "Corp New Logo",
       "group": "segment",
       "segmentFilter": "Corp NL",
       "defaultDensity": 1,
-      "densities": [1, 2, 3]
+      "densities": [1, 2]
     },
     {
       "key": "corpUpsell",
@@ -22,48 +28,27 @@
       "group": "segment",
       "segmentFilter": "Corp Upsell",
       "defaultDensity": 1,
-      "densities": [1, 2, 3]
+      "densities": [1, 2]
     },
     {
       "key": "ent",
-      "label": "ENT",
+      "label": "Enterprise",
       "group": "segment",
       "segmentFilter": "ENT",
       "defaultDensity": 1,
-      "densities": [1, 2, 3]
-    },
-    {
-      "key": "reverse",
-      "label": "Reverse",
-      "group": "analytics",
-      "defaultDensity": 1,
-      "densities": [1]
-    },
-    {
-      "key": "specialist",
-      "label": "Specialist Map",
-      "group": "analytics",
-      "defaultDensity": 1,
-      "densities": [1]
-    },
-    {
-      "key": "capacity",
-      "label": "Capacity / Load",
-      "group": "analytics",
-      "defaultDensity": 1,
-      "densities": [1]
+      "densities": [1, 2]
     },
     {
       "key": "discrepancies",
       "label": "Discrepancies",
-      "group": "analytics",
+      "group": "ops",
       "defaultDensity": 1,
       "densities": [1]
     },
     {
-      "key": "roadmap",
-      "label": "Roadmap",
-      "group": "reference",
+      "key": "settings",
+      "label": "Settings",
+      "group": "config",
       "defaultDensity": 1,
       "densities": [1]
     }
